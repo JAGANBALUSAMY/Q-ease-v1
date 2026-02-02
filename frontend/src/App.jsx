@@ -4,27 +4,46 @@ import { AuthProvider } from './contexts/AuthContext';
 import { SocketProvider } from './contexts/SocketContext';
 
 // Pages
-import LandingPage from './pages/LandingPage';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import OrganizationSearchPage from './pages/OrganizationSearchPage';
-import CustomerQueuePage from './pages/CustomerQueuePage';
-import OrganizationDetailPage from './pages/OrganizationDetailPage';
-import MyTokensPage from './pages/MyTokensPage';
-import QRScanPage from './pages/QRScanPage';
-import StaffDashboardPage from './pages/StaffDashboardPage';
-import AdminDashboardPage from './pages/AdminDashboardPage';
-import SuperAdminManageAdminsPage from './pages/SuperAdminManageAdminsPage';
-import AdminUserManagementPage from './pages/AdminUserManagementPage';
-import AdminAnalyticsPage from './pages/AdminAnalyticsPage';
-import AdminQueueManagementPage from './pages/AdminQueueManagementPage';
-import AdminSettingsPage from './pages/AdminSettingsPage';
-import ProfilePage from './pages/ProfilePage';
-import NotificationsPage from './pages/NotificationsPage';
+// Shared Pages
+import LandingPage from './features/shared/pages/LandingPage';
+import NotFoundPage from './features/shared/pages/NotFoundPage';
+
+// Auth Pages
+import LoginPage from './features/auth/pages/LoginPage';
+import RegisterPage from './features/auth/pages/RegisterPage';
+
+// Customer Pages
+import OrganizationSearchPage from './features/customer/pages/OrganizationSearchPage';
+import CustomerQueuePage from './features/customer/pages/CustomerQueuePage';
+import OrganizationDetailPage from './features/customer/pages/OrganizationDetailPage';
+import MyTokensPage from './features/customer/pages/MyTokensPage';
+
+// Staff Pages
+import StaffDashboardPage from './features/staff/pages/StaffDashboardPage';
+import StaffCallNextPage from './features/staff/pages/StaffCallNextPage';
+
+// Admin Pages
+import AdminDashboardPage from './features/admin/pages/AdminDashboardPage';
+import AdminUserManagementPage from './features/admin/pages/AdminUserManagementPage';
+import AdminAnalyticsPage from './features/admin/pages/AdminAnalyticsPage';
+import AdminQueueManagementPage from './features/admin/pages/AdminQueueManagementPage';
+import AdminSettingsPage from './features/admin/pages/AdminSettingsPage';
+
+// Other Pages (need to categorize)
+import QRScanPage from './features/customer/pages/QRScanPage';
+import QueueJoinPage from './features/customer/pages/QueueJoinPage';
+import OrganisationSearchPage from './features/customer/pages/OrganisationSearchPage';
+
+// Super Admin Pages
+import SuperAdminManageAdminsPage from './features/super-admin/pages/SuperAdminManageAdminsPage';
+
+// Shared Pages (Profile, Notifications)
+import ProfilePage from './features/shared/pages/ProfilePage';
+import NotificationsPage from './features/shared/pages/NotificationsPage';
 
 // Components
-import PrivateRoute from './components/PrivateRoute';
-import Navbar from './components/Navbar';
+import PrivateRoute from './components/routing/PrivateRoute';
+import Navbar from './components/layout/Navbar';
 
 function App() {
   return (
@@ -34,7 +53,7 @@ function App() {
           <Navbar />
           <Routes>
             {/* Public Routes */}
-            <Route path="/landing" element={<LandingPage />} />
+            <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/search" element={<OrganizationSearchPage />} />
@@ -42,7 +61,7 @@ function App() {
 
             {/* Protected User Routes */}
             <Route
-              path="/"
+              path="/browse"
               element={
                 <PrivateRoute>
                   <OrganizationSearchPage />
@@ -76,23 +95,46 @@ function App() {
 
             {/* Staff Routes */}
             <Route
-              path="/staff"
+              path="/staff/dashboard"
               element={
                 <PrivateRoute roles={['STAFF', 'ORGANISATION_ADMIN', 'SUPER_ADMIN']}>
                   <StaffDashboardPage />
                 </PrivateRoute>
               }
             />
+            <Route
+              path="/staff/queue/:queueId"
+              element={
+                <PrivateRoute roles={['STAFF', 'ORGANISATION_ADMIN', 'SUPER_ADMIN']}>
+                  <StaffCallNextPage />
+                </PrivateRoute>
+              }
+            />
+            {/* Redirect legacy /staff to /staff/dashboard */}
+            <Route path="/staff" element={<Navigate to="/staff/dashboard" replace />} />
 
             {/* Admin Routes */}
             <Route
-              path="/admin"
+              path="/admin/dashboard"
               element={
                 <PrivateRoute roles={['ORGANISATION_ADMIN', 'SUPER_ADMIN']}>
                   <AdminDashboardPage />
                 </PrivateRoute>
               }
             />
+            <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+
+            {/* Super Admin Routes */}
+            <Route
+              path="/super-admin/dashboard"
+              element={
+                <PrivateRoute roles={['SUPER_ADMIN']}>
+                  {/* Reusing AdminDashboardPage for now, but on a distinct route */}
+                  <AdminDashboardPage />
+                </PrivateRoute>
+              }
+            />
+
             <Route
               path="/admin/admins"
               element={
@@ -160,8 +202,8 @@ function App() {
               }
             />
 
-            {/* Catch all - redirect to home */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            {/* Catch all - 404 Not Found */}
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Router>
       </SocketProvider>

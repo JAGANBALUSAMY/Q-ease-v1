@@ -111,7 +111,7 @@ app.get('/health', (req, res) => {
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
-const organisationRoutes = require('./routes/organisations');
+const organisationRoutes = require('./routes/organisationRoutes');
 const queueRoutes = require('./routes/queueRoutes');
 const tokenRoutes = require('./routes/tokenRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
@@ -217,3 +217,5 @@ process.on('SIGTERM', () => {
 });
 
 module.exports = app;
+
+

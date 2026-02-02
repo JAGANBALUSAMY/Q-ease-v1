@@ -196,16 +196,26 @@ const getOrganisationById = async (req, res) => {
         queues: {
           where: { isActive: true },
           orderBy: { createdAt: 'desc' },
-          select: {
-            id: true,
-            name: true,
-            description: true,
-            status: true,
-            waitingCount: true,
-            averageTime: true,
-            currentServing: true,
-            createdAt: true,
-            updatedAt: true
+          id: true,
+          name: true,
+          description: true,
+          averageTime: true,
+          isActive: true, // Note: status is not a field, assuming isActive maps to logic
+          createdAt: true,
+          updatedAt: true,
+          _count: {
+            select: {
+              tokens: {
+                where: { status: 'PENDING' }
+              }
+            }
+          }, // We can use this to map to waitingCount in the transform
+          tokens: {
+            where: { status: 'CALLED' },
+            take: 1,
+            select: {
+              tokenId: true
+            }
           }
         }
       }
@@ -218,10 +228,25 @@ const getOrganisationById = async (req, res) => {
       });
     }
 
+    // Transform queues to match frontend expectation
+    const transformedQueues = organisation.queues.map(queue => ({
+      ...queue,
+      waitingCount: queue._count?.tokens || 0,
+      currentServing: queue.tokens?.[0]?.tokenId || null,
+      status: queue.isActive ? 'ACTIVE' : 'PAUSED',
+      _count: undefined,
+      tokens: undefined
+    }));
+
+    const responseOrg = {
+      ...organisation,
+      queues: transformedQueues
+    };
+
     res.status(200).json({
       success: true,
       data: {
-        organisation: organisation
+        organisation: responseOrg
       }
     });
   } catch (error) {
@@ -328,21 +353,34 @@ const getOrganisationByCode = async (req, res) => {
 
     const organisation = await prisma.organisation.findUnique({
       where: { code: code.toUpperCase() },
-      select: {
-        id: true,
-        code: true,
-        name: true,
-        description: true,
-        address: true,
-        city: true,
-        state: true,
-        country: true,
-        contactEmail: true,
-        contactPhone: true,
-        isVerified: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true
+      include: {
+        queues: {
+          where: { isActive: true },
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            averageTime: true,
+            isActive: true,
+            createdAt: true,
+            updatedAt: true,
+            _count: {
+              select: {
+                tokens: {
+                  where: { status: 'PENDING' }
+                }
+              }
+            },
+            tokens: {
+              where: { status: 'CALLED' },
+              take: 1,
+              select: {
+                tokenId: true
+              }
+            }
+          }
+        }
       }
     });
 
@@ -353,10 +391,25 @@ const getOrganisationByCode = async (req, res) => {
       });
     }
 
+    // Transform queues to match frontend expectation
+    const transformedQueues = organisation.queues.map(queue => ({
+      ...queue,
+      waitingCount: queue._count?.tokens || 0,
+      currentServing: queue.tokens?.[0]?.tokenId || null,
+      status: queue.isActive ? 'ACTIVE' : 'PAUSED',
+      _count: undefined,
+      tokens: undefined
+    }));
+
+    const responseOrg = {
+      ...organisation,
+      queues: transformedQueues
+    };
+
     res.status(200).json({
       success: true,
       data: {
-        organisation: organisation
+        organisation: responseOrg
       }
     });
   } catch (error) {
@@ -409,7 +462,14 @@ const searchOrganisations = async (req, res) => {
         isVerified: true,
         isActive: true,
         createdAt: true,
-        updatedAt: true
+        updatedAt: true,
+        _count: {
+          select: {
+            queues: {
+              where: { isActive: true }
+            }
+          }
+        }
       },
       orderBy: {
         createdAt: 'desc'

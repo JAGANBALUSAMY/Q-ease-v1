@@ -9,38 +9,48 @@ const nodemailer = require('nodemailer');
 let transporter = null;
 
 const initializeTransporter = () => {
-    if (transporter) return transporter;
+  if (transporter) return transporter;
 
-    // Check if SMTP credentials are provided
-    if (process.env.SMTP_HOST && process.env.SMTP_USER) {
-        transporter = nodemailer.createTransporter({
-            host: process.env.SMTP_HOST,
-            port: parseInt(process.env.SMTP_PORT) || 587,
-            secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
-            auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS
-            }
+  // Check if SMTP credentials are provided
+  if (process.env.SMTP_HOST && process.env.SMTP_USER) {
+    // Create transporter
+    try {
+      // Check if nodemailer is available/mocked
+      if (typeof nodemailer.createTransport === 'function') { // Corrected to createTransport
+        transporter = nodemailer.createTransport({
+          host: process.env.SMTP_HOST || 'smtp.ethereal.email',
+          port: parseInt(process.env.SMTP_PORT) || 587,
+          secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
+          auth: {
+            user: process.env.SMTP_USER || 'ethereal_user',
+            pass: process.env.SMTP_PASS || 'ethereal_pass'
+          }
         });
         console.log('✅ Email service initialized');
-    } else {
-        console.log('ℹ️  SMTP credentials not provided - email notifications disabled');
+      } else {
+        console.warn('⚠️ Nodemailer createTransport is not a function. Email sending disabled.'); // Corrected to createTransport
+      }
+    } catch (err) {
+      console.warn('⚠️ Failed to create email transporter:', err.message);
     }
+  } else {
+    console.log('ℹ️  SMTP credentials not provided - email notifications disabled');
+  }
 
-    return transporter;
+  return transporter;
 };
 
 // Send token issued email
 const sendTokenIssuedEmail = async (user, token, queue, organisation) => {
-    const transport = initializeTransporter();
-    if (!transport) return { success: false, message: 'Email not configured' };
+  const transport = initializeTransporter();
+  if (!transport) return { success: false, message: 'Email not configured' };
 
-    try {
-        const mailOptions = {
-            from: `"${organisation.name}" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
-            to: user.email,
-            subject: `Token ${token.tokenId} - ${queue.name}`,
-            html: `
+  try {
+    const mailOptions = {
+      from: `"${organisation.name}" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+      to: user.email,
+      subject: `Token ${token.tokenId} - ${queue.name}`,
+      html: `
         <!DOCTYPE html>
         <html>
         <head>
@@ -92,28 +102,28 @@ const sendTokenIssuedEmail = async (user, token, queue, organisation) => {
         </body>
         </html>
       `
-        };
+    };
 
-        const info = await transport.sendMail(mailOptions);
-        console.log('✅ Token issued email sent:', info.messageId);
-        return { success: true, messageId: info.messageId };
-    } catch (error) {
-        console.error('❌ Email send error:', error);
-        return { success: false, error: error.message };
-    }
+    const info = await transport.sendMail(mailOptions);
+    console.log('✅ Token issued email sent:', info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('❌ Email send error:', error);
+    return { success: false, error: error.message };
+  }
 };
 
 // Send token called email
 const sendTokenCalledEmail = async (user, token, queue, organisation) => {
-    const transport = initializeTransporter();
-    if (!transport) return { success: false, message: 'Email not configured' };
+  const transport = initializeTransporter();
+  if (!transport) return { success: false, message: 'Email not configured' };
 
-    try {
-        const mailOptions = {
-            from: `"${organisation.name}" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
-            to: user.email,
-            subject: `🔔 Token ${token.tokenId} Called - Please Proceed`,
-            html: `
+  try {
+    const mailOptions = {
+      from: `"${organisation.name}" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+      to: user.email,
+      subject: `🔔 Token ${token.tokenId} Called - Please Proceed`,
+      html: `
         <!DOCTYPE html>
         <html>
         <head>
@@ -155,28 +165,28 @@ const sendTokenCalledEmail = async (user, token, queue, organisation) => {
         </body>
         </html>
       `
-        };
+    };
 
-        const info = await transport.sendMail(mailOptions);
-        console.log('✅ Token called email sent:', info.messageId);
-        return { success: true, messageId: info.messageId };
-    } catch (error) {
-        console.error('❌ Email send error:', error);
-        return { success: false, error: error.message };
-    }
+    const info = await transport.sendMail(mailOptions);
+    console.log('✅ Token called email sent:', info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('❌ Email send error:', error);
+    return { success: false, error: error.message };
+  }
 };
 
 // Send token reminder email
 const sendTokenReminderEmail = async (user, token, queue, organisation) => {
-    const transport = initializeTransporter();
-    if (!transport) return { success: false, message: 'Email not configured' };
+  const transport = initializeTransporter();
+  if (!transport) return { success: false, message: 'Email not configured' };
 
-    try {
-        const mailOptions = {
-            from: `"${organisation.name}" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
-            to: user.email,
-            subject: `⏰ Token ${token.tokenId} - Your Turn is Approaching`,
-            html: `
+  try {
+    const mailOptions = {
+      from: `"${organisation.name}" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+      to: user.email,
+      subject: `⏰ Token ${token.tokenId} - Your Turn is Approaching`,
+      html: `
         <!DOCTYPE html>
         <html>
         <head>
@@ -217,19 +227,19 @@ const sendTokenReminderEmail = async (user, token, queue, organisation) => {
         </body>
         </html>
       `
-        };
+    };
 
-        const info = await transport.sendMail(mailOptions);
-        console.log('✅ Token reminder email sent:', info.messageId);
-        return { success: true, messageId: info.messageId };
-    } catch (error) {
-        console.error('❌ Email send error:', error);
-        return { success: false, error: error.message };
-    }
+    const info = await transport.sendMail(mailOptions);
+    console.log('✅ Token reminder email sent:', info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('❌ Email send error:', error);
+    return { success: false, error: error.message };
+  }
 };
 
 module.exports = {
-    sendTokenIssuedEmail,
-    sendTokenCalledEmail,
-    sendTokenReminderEmail
+  sendTokenIssuedEmail,
+  sendTokenCalledEmail,
+  sendTokenReminderEmail
 };

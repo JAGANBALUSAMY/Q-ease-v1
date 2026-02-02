@@ -519,6 +519,82 @@ const exportAnalytics = async (req, res) => {
   }
 };
 
+// Get staff stats for staff dashboard
+const getStaffStats = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const organisationId = req.user.organisationId;
+
+    if (!organisationId) {
+      return res.json({
+        success: true,
+        stats: {
+          totalServed: 0,
+          totalWaiting: 0,
+          avgWaitTime: 0
+        }
+      });
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Get tokens served today in this organization
+    const servedToday = await prisma.token.count({
+      where: {
+        status: 'SERVED',
+        servedAt: { gte: today },
+        organisationId
+      }
+    });
+
+    // Get currently waiting tokens in this organization
+    const waitingCount = await prisma.token.count({
+      where: {
+        status: { in: ['PENDING', 'CALLED'] },
+        organisationId
+      }
+    });
+
+    // Calculate average wait time for served tokens today
+    const servedTokens = await prisma.token.findMany({
+      where: {
+        status: 'SERVED',
+        servedAt: { gte: today },
+        organisationId
+      },
+      select: {
+        issuedAt: true,
+        servedAt: true
+      }
+    });
+
+    let avgWaitTime = 0;
+    if (servedTokens.length > 0) {
+      const totalWaitTime = servedTokens.reduce((sum, token) => {
+        const waitMinutes = (token.servedAt - token.issuedAt) / 60000;
+        return sum + waitMinutes;
+      }, 0);
+      avgWaitTime = Math.round(totalWaitTime / servedTokens.length);
+    }
+
+    res.json({
+      success: true,
+      stats: {
+        totalServed: servedToday,
+        totalWaiting: waitingCount,
+        avgWaitTime
+      }
+    });
+  } catch (error) {
+    console.error('Staff stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch staff stats'
+    });
+  }
+};
+
 module.exports = {
   getOverview,
   getRealtimeOverview,
@@ -530,5 +606,6 @@ module.exports = {
   getOperationalEfficiency,
   exportAnalytics,
   getAdminStats,
-  getRecentActivity
+  getRecentActivity,
+  getStaffStats
 };

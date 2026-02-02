@@ -12,16 +12,16 @@ const {
   updateUserStatus,
   deleteUser
 } = require('../controllers/userController');
-const { authorizeRole } = require('../middleware/auth');
+const { authorizeRoles } = require('../middleware/authMiddleware');
 
 // All routes require authentication
 router.use(authenticateToken);
 
 // User Management Routes (Admin/Staff management)
 router.get('/', getAllUsers); // List users
-router.post('/', authorizeRole(['ADMIN', 'SUPER_ADMIN', 'ORGANISATION_ADMIN']), createUser); // Create user
-router.put('/:id/status', authorizeRole(['ADMIN', 'SUPER_ADMIN', 'ORGANISATION_ADMIN']), updateUserStatus); // Toggle status
-router.delete('/:id', authorizeRole(['ADMIN', 'SUPER_ADMIN', 'ORGANISATION_ADMIN']), deleteUser); // Delete user
+router.post('/', authorizeRoles(['ADMIN', 'SUPER_ADMIN', 'ORGANISATION_ADMIN']), createUser); // Create user
+router.put('/:id/status', authorizeRoles(['ADMIN', 'SUPER_ADMIN', 'ORGANISATION_ADMIN']), updateUserStatus); // Toggle status
+router.delete('/:id', authorizeRoles(['ADMIN', 'SUPER_ADMIN', 'ORGANISATION_ADMIN']), deleteUser); // Delete user
 
 // User profile routes
 router.get('/profile', getUserProfile);

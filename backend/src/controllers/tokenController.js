@@ -271,6 +271,24 @@ const callNextToken = async (req, res) => {
     const { queueId } = req.params;
     const callerId = req.user.id; // Staff member calling
 
+    // First, mark any currently CALLED token as SERVED
+    const currentCalledToken = await prisma.token.findFirst({
+      where: {
+        queueId,
+        status: 'CALLED'
+      }
+    });
+
+    if (currentCalledToken) {
+      await prisma.token.update({
+        where: { id: currentCalledToken.id },
+        data: {
+          status: 'SERVED',
+          servedAt: new Date()
+        }
+      });
+    }
+
     // Find next pending token (priority order)
     const nextToken = await prisma.token.findFirst({
       where: {

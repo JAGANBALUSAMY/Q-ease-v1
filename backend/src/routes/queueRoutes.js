@@ -17,6 +17,7 @@ const {
   getPublicQueues,
   getPublicQueueById
 } = require('../controllers/queueController');
+const { callNextToken } = require('../controllers/tokenController');
 
 // Routes are prefixed with /api/queues
 
@@ -42,5 +43,8 @@ router.delete('/:id', authenticateToken, checkQueueAccess, authorizeRoles(['ORGA
 // Pause/Resume (Staff can also do this)
 router.put('/:id/pause', authenticateToken, checkQueueAccess, authorizeRoles(['ORGANISATION_ADMIN', 'SUPER_ADMIN', 'STAFF']), pauseQueue);
 router.put('/:id/resume', authenticateToken, checkQueueAccess, authorizeRoles(['ORGANISATION_ADMIN', 'SUPER_ADMIN', 'STAFF']), resumeQueue);
+
+// Call next token (Staff/Admin)
+router.post('/:queueId/call-next', authenticateToken, authorizeRoles(['STAFF', 'ORGANISATION_ADMIN', 'SUPER_ADMIN']), callNextToken);
 
 module.exports = router;
