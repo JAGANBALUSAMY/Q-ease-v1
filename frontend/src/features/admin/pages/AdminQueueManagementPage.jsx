@@ -319,7 +319,6 @@ const AdminQueueManagementPage = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="search-input"
             />
-            <span className="search-icon">🔍</span>
           </div>
 
           <select
@@ -333,83 +332,85 @@ const AdminQueueManagementPage = () => {
           </select>
         </div>
 
-        {/* Queues List */}
-        <div className="queues-list">
+        {/* Queues Table */}
+        <div className="queues-table">
           {loading ? (
             <div className="loading-container">
               <div className="spinner"></div>
               <p>Loading queues...</p>
             </div>
           ) : filteredQueues.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-icon">📋</div>
-              <h3>No queues found</h3>
-              <p>{searchTerm ? 'Try adjusting your search criteria' : (user?.role === 'SUPER_ADMIN' ? 'Get started by creating your first queue' : 'No queues have been assigned to you yet. Please contact a Super Admin.')}</p>
-              {!searchTerm && user?.role === 'SUPER_ADMIN' && (
-                <button onClick={handleCreateNew} className="create-button">
-                  Create Your First Queue
-                </button>
-              )}
+            <div className="empty-row">
+              <div className="empty-state">
+                <h4>No queues found</h4>
+                <p>{searchTerm ? 'Try adjusting your search criteria' : (user?.role === 'SUPER_ADMIN' ? 'Get started by creating your first queue' : 'No queues have been assigned to you yet. Please contact a Super Admin.')}</p>
+                {!searchTerm && user?.role === 'SUPER_ADMIN' && (
+                  <button onClick={handleCreateNew} className="create-button">
+                    Create Your First Queue
+                  </button>
+                )}
+              </div>
             </div>
           ) : (
-            <div className="queues-grid">
-              {filteredQueues.map(queue => (
-                <div key={queue.id} className="queue-card">
-                  <div className="queue-header">
-                    <h3>{queue.name}</h3>
-                    <span className={`status-badge ${queue.isActive ? 'active' : 'inactive'}`}>
-                      {queue.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                  </div>
-
-                  <p className="queue-description">{queue.description}</p>
-
-                  <div className="queue-stats">
-                    <div className="stat">
-                      <span className="stat-label">Waiting:</span>
-                      <span className="stat-value">{queue.waitingCount}</span>
-                    </div>
-                    <div className="stat">
-                      <span className="stat-label">Avg Wait:</span>
-                      <span className="stat-value">{queue.averageTime || queue.avgWaitTime} min</span>
-                    </div>
-                    {/* Staff count is not yet available from backend
-                    <div className="stat">
-                      <span className="stat-label">Staff:</span>
-                      <span className="stat-value">{queue.staffCount || 0}</span>
-                    </div>
-                    */}
-                  </div>
-
-                  <div className="queue-actions">
-                    <button
-                      onClick={() => handleViewQueue(queue.id)}
-                      className="view-button"
-                    >
-                      View Details
-                    </button>
-                    <button
-                      onClick={() => handleEditQueue(queue.id)}
-                      className="edit-button"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => toggleQueueStatus(queue.id, queue.isActive)}
-                      className={`status-button ${queue.isActive ? 'pause' : 'resume'}`}
-                    >
-                      {queue.isActive ? 'Pause' : 'Resume'}
-                    </button>
-                    <button
-                      onClick={() => deleteQueue(queue.id)}
-                      className="delete-button"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Queue Name</th>
+                  <th>Description</th>
+                  <th>Status</th>
+                  <th>Waiting</th>
+                  <th>Avg Wait</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredQueues.map(queue => (
+                  <tr key={queue.id}>
+                    <td>
+                      <div className="queue-info">
+                        <div className="queue-name">{queue.name}</div>
+                      </div>
+                    </td>
+                    <td>{queue.description || '—'}</td>
+                    <td>
+                      <span className={`status-badge ${queue.isActive ? 'active' : 'inactive'}`}>
+                        {queue.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td>{queue.waitingCount || 0}</td>
+                    <td>{queue.averageTime || queue.avgWaitTime || 0} min</td>
+                    <td>
+                      <div className="action-buttons">
+                        <button
+                          onClick={() => handleViewQueue(queue.id)}
+                          className="view-button"
+                        >
+                          View
+                        </button>
+                        <button
+                          onClick={() => handleEditQueue(queue.id)}
+                          className="edit-button"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => toggleQueueStatus(queue.id, queue.isActive)}
+                          className={`status-toggle ${queue.isActive ? 'deactivate' : 'activate'}`}
+                        >
+                          {queue.isActive ? 'Pause' : 'Resume'}
+                        </button>
+                        <button
+                          onClick={() => deleteQueue(queue.id)}
+                          className="delete-button"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
         </div>
       </div>

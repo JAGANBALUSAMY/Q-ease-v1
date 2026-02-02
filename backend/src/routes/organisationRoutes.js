@@ -6,9 +6,12 @@ const {
   verifyOrganisation,
   getOrganisationByCode,
   searchOrganisations,
-  getOrganisationById
+  getOrganisationById,
+  getMyOrganisation
 } = require('../controllers/organisationController');
 
+// Get my organisation (authenticated)
+router.get('/my', authenticateToken, getMyOrganisation);
 // Create organisation (Super Admin only)
 router.post('/', authenticateToken, authorizeRoles('SUPER_ADMIN'), createOrganisation);
 
