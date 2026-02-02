@@ -13,7 +13,7 @@ const LoginPage = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  
+
   // State for role selection modal
   const [requiresRoleSelection, setRequiresRoleSelection] = useState(false);
   const [availableRoles, setAvailableRoles] = useState([]);
@@ -30,9 +30,9 @@ const LoginPage = () => {
   const handleRoleSelection = async (selectedRole) => {
     setLoading(true);
     setError('');
-    
+
     const result = await selectRole(userId, selectedRole);
-    
+
     if (result.success) {
       handleRedirect(result.user.role);
     } else {
@@ -72,6 +72,22 @@ const LoginPage = () => {
       }
     } else {
       setError(result.message || result.error);
+    }
+    setLoading(false);
+  };
+
+  const handleGoogleLogin = async () => {
+    setError('');
+    setLoading(true);
+
+    const result = await loginWithGoogle();
+
+    if (result.success) {
+      // Redirect based on user role
+      const userRole = result.user.role?.name || result.user.roleModel?.name || 'CUSTOMER';
+      handleRedirect(userRole);
+    } else {
+      setError(result.error || result.message);
     }
     setLoading(false);
   };
