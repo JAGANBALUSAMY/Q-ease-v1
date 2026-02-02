@@ -28,8 +28,17 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Check if it's a 401 error
     if (error.response?.status === 401) {
-      console.warn('Unauthorized, redirecting to login');
+      // Don't redirect if the error comes from the login endpoint
+      // This prevents the page from refreshing when user enters wrong credentials
+      const isLoginRequest = error.config.url.includes('/auth/login') || error.config.url.includes('/login');
+      
+      if (!isLoginRequest) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
     }
 
     return Promise.reject(error);
