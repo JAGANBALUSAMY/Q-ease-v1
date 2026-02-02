@@ -130,6 +130,42 @@
   flex-shrink: 0;
 }
 
+.input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-icon {
+  position: absolute;
+  left: var(--space-3);
+  color: var(--gray-400);
+  flex-shrink: 0;
+}
+
+.password-toggle {
+  position: absolute;
+  right: var(--space-3);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--space-2);
+  color: var(--gray-400);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease;
+}
+
+.password-toggle:hover {
+  color: var(--primary-600);
+}
+
+.password-toggle svg {
+  width: 20px;
+  height: 20px;
+}
+
 /* Role Selector */
 .role-selector {
   display: flex;
@@ -297,6 +333,16 @@
   .branding-content h2 {
     font-size: var(--text-3xl);
   }
+}
+
+/* Error text styles */
+.error-text {
+  color: #DC2626;
+  font-size: var(--text-sm);
+  margin-top: var(--space-2);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
 }
 
 @media (max-width: 768px) {
