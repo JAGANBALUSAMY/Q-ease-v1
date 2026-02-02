@@ -41,8 +41,6 @@ const Navbar = () => {
                     <div className="navbar-links desktop-only">
                         {user ? (
                             <>
-                                <Link to="/" className="nav-link">Home</Link>
-                                <Link to="/about" className="nav-link">About</Link>
                                 
                                 {/* Customer Links */}
                                 {(!user.role || user.role === 'customer' || user.role === 'USER') && (
@@ -68,7 +66,7 @@ const Navbar = () => {
                                     </>
                                 )}
 
-                                {/* Staff Links */}
+                                {/* Staff Links
                                 {['STAFF', 'ADMIN', 'SUPER_ADMIN'].includes(user.role) && (
                                     <Link to="/staff/dashboard" className="nav-link">
                                         <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -76,7 +74,7 @@ const Navbar = () => {
                                         </svg>
                                         Staff Dashboard
                                     </Link>
-                                )}
+                                )} */}
 
                                 {/* Admin Links */}
                                 {['ADMIN', 'SUPER_ADMIN'].includes(user.role) && (
@@ -183,12 +181,6 @@ const Navbar = () => {
                                     </>
                                 )}
 
-                                {/* Staff Links */}
-                                {['STAFF', 'ADMIN', 'SUPER_ADMIN'].includes(user.role) && (
-                                    <Link to="/staff/dashboard" className="mobile-link" onClick={() => setIsMenuOpen(false)}>
-                                        Staff Dashboard
-                                    </Link>
-                                )}
 
                                 {/* Admin Links */}
                                 {['ADMIN', 'SUPER_ADMIN'].includes(user.role) && (
