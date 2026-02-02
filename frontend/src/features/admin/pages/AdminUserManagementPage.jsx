@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../contexts/AuthContext';
-import api from '../../../utils/api';
+import api from '../../../services/api';
 import '../styles/AdminUserManagementPage.css';
 
 const AdminUserManagementPage = () => {
@@ -12,7 +12,6 @@ const AdminUserManagementPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterRole, setFilterRole] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
   const [newUser, setNewUser] = useState({
     firstName: '',
@@ -32,9 +31,12 @@ const AdminUserManagementPage = () => {
       setError('');
 
       const response = await api.get('/users');
-      setUsers(response.data.data.users || []);
+      // Filter to show only STAFF users
+      const allUsers = response.data.data.users || [];
+      const staffUsers = allUsers.filter(user => user.role === 'STAFF');
+      setUsers(staffUsers);
     } catch (err) {
-      setError('Failed to load users');
+      setError('Failed to load staff members');
       console.error('Error loading users:', err);
     } finally {
       setLoading(false);
@@ -86,8 +88,7 @@ const AdminUserManagementPage = () => {
     const matchesSearch = user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = filterRole === 'all' || user.role.toLowerCase() === filterRole.toLowerCase();
-    return matchesSearch && matchesRole;
+    return matchesSearch;
   });
 
   const getRoleColor = (role) => {
@@ -125,7 +126,7 @@ const AdminUserManagementPage = () => {
         <button onClick={() => navigate(-1)} className="back-button">
           ← Back to Dashboard
         </button>
-        <h1>User Management</h1>
+        <h1>Staff Management</h1>
       </div>
 
       {error && (
@@ -138,30 +139,18 @@ const AdminUserManagementPage = () => {
         <div className="search-filter">
           <input
             type="text"
-            placeholder="Search users..."
+            placeholder="Search staff..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="search-input"
           />
-
-          <select
-            value={filterRole}
-            onChange={(e) => setFilterRole(e.target.value)}
-            className="filter-select"
-          >
-            <option value="all">All Roles</option>
-            <option value="user">User</option>
-            <option value="staff">Staff</option>
-            <option value="organisation_admin">Admin</option>
-            <option value="super_admin">Super Admin</option>
-          </select>
         </div>
 
         <button
           onClick={() => setShowAddModal(true)}
           className="add-user-button"
         >
-          + Add User
+          + Add Staff
         </button>
       </div>
 
@@ -237,7 +226,7 @@ const AdminUserManagementPage = () => {
         <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Add New User</h3>
+              <h3>Add New Staff Member</h3>
               <button onClick={() => setShowAddModal(false)} className="close-button">×</button>
             </div>
 
@@ -302,7 +291,7 @@ const AdminUserManagementPage = () => {
                   Cancel
                 </button>
                 <button type="submit" className="save-button">
-                  Add User
+                  Add Staff
                 </button>
               </div>
             </form>

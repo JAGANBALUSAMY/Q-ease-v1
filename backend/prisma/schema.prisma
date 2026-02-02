@@ -28,6 +28,7 @@ model User {
   createdUsers   User[]         @relation("UserLineage")
   organisation   Organisation?  @relation(fields: [organisationId], references: [id])
   roleModel      RoleModel      @relation(fields: [roleId], references: [id])
+  assignedQueues Queue[]        @relation("AdminQueues")
 }
 
 model RoleModel {
@@ -68,6 +69,7 @@ model Organisation {
 model Queue {
   id             String       @id @default(cuid())
   organisationId String
+  adminId        String?
   name           String
   description    String?
   maxTokens      Int?
@@ -77,6 +79,7 @@ model Queue {
   updatedAt      DateTime     @updatedAt
   analytics      Analytics[]
   organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  admin          User?        @relation("AdminQueues", fields: [adminId], references: [id])
   tokens         Token[]
 }
 

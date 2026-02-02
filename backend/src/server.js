@@ -115,7 +115,7 @@ const organisationRoutes = require('./routes/organisationRoutes');
 const queueRoutes = require('./routes/queueRoutes');
 const tokenRoutes = require('./routes/tokenRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
-const { authenticateToken } = require('./middleware/authMiddleware');
+const { authenticateToken, authorizeRoles } = require('./middleware/authMiddleware');
 const systemAuth = require('./middleware/systemAuthMiddleware');
 const { createTenant } = require('./controllers/systemAdminController');
 const { createAdmin, getMyAdmins } = require('./controllers/superUserController');
@@ -135,8 +135,8 @@ app.use('/api/qr', qrCodeRoutes);
 app.post('/api/system/create-tenant', systemAuth, createTenant);
 
 // Super Admin routes
-app.post('/api/super/admins', authenticateToken, createAdmin);
-app.get('/api/super/admins', authenticateToken, getMyAdmins);
+app.post('/api/super/admins', authenticateToken, authorizeRoles(['SUPER_ADMIN']), createAdmin);
+app.get('/api/super/admins', authenticateToken, authorizeRoles(['SUPER_ADMIN']), getMyAdmins);
 
 // 404 handler
 app.use((req, res) => {

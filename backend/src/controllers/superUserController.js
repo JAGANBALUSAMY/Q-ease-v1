@@ -11,13 +11,9 @@ const createAdmin = async (req, res) => {
         const superAdminId = req.user.id; // From Auth Middleware
         const organisationId = req.user.organisationId;
 
-        // 1. Validate Scope
-        // Ensure the caller is actually a Super Admin
-        if (req.user.role !== 'SUPER_ADMIN') {
-            return res.status(403).json({ success: false, message: 'Only Super Admins can create Admins' });
-        }
+        // Role check is now handled by authorizeRoles middleware
 
-        // 2. Check existence
+        // Check existence
         const existingUser = await prisma.user.findUnique({ where: { email } });
         if (existingUser) {
             return res.status(409).json({ success: false, message: 'User (Admin) already exists' });
@@ -66,18 +62,11 @@ const createAdmin = async (req, res) => {
     }
 };
 
-// Get Admins created by this Super Admin
 const getMyAdmins = async (req, res) => {
     try {
-        const superAdminId = req.user.id;
-
-        if (req.user.role !== 'SUPER_ADMIN') {
-            return res.status(403).json({ success: false, message: 'Access denied' });
-        }
-
+        // Show all ORGANISATION_ADMINs to Super Admin
         const admins = await prisma.user.findMany({
             where: {
-                creatorId: superAdminId, // STRICT OWNERSHIP CHECK
                 roleModel: { name: 'ORGANISATION_ADMIN' }
             },
             select: {
@@ -85,8 +74,10 @@ const getMyAdmins = async (req, res) => {
                 firstName: true,
                 lastName: true,
                 email: true,
+                phoneNumber: true,
                 isActive: true,
-                createdAt: true
+                createdAt: true,
+                organisationId: true // Need this for filtering on frontend
             }
         });
 

@@ -25,6 +25,7 @@ import StaffCallNextPage from './features/staff/pages/StaffCallNextPage';
 // Admin Pages
 import AdminDashboardPage from './features/admin/pages/AdminDashboardPage';
 import AdminUserManagementPage from './features/admin/pages/AdminUserManagementPage';
+import AdminCustomerManagementPage from './features/admin/pages/AdminCustomerManagementPage';
 import AdminAnalyticsPage from './features/admin/pages/AdminAnalyticsPage';
 import AdminQueueManagementPage from './features/admin/pages/AdminQueueManagementPage';
 import AdminSettingsPage from './features/admin/pages/AdminSettingsPage';
@@ -148,6 +149,14 @@ function App() {
               element={
                 <PrivateRoute roles={['ORGANISATION_ADMIN', 'SUPER_ADMIN']}>
                   <AdminUserManagementPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/admin/customers"
+              element={
+                <PrivateRoute roles={['ORGANISATION_ADMIN', 'SUPER_ADMIN']}>
+                  <AdminCustomerManagementPage />
                 </PrivateRoute>
               }
             />

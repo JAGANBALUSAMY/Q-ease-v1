@@ -6,14 +6,17 @@ const getAllQueues = async (req, res) => {
   try {
     const { isActive } = req.query;
     let organisationId = req.query.organisationId;
+    // Prepare filter
+    const where = {};
 
     // Strict Scoping: If not Super Admin, force them to see only their own org's queues
-    if (req.user.role !== 'SUPER_ADMIN') {
+    if (req.user.role === 'ORGANISATION_ADMIN') {
+      organisationId = req.user.organisationId;
+      where.adminId = req.user.id; // Only show queues assigned to this admin
+    } else if (req.user.role === 'STAFF') {
       organisationId = req.user.organisationId;
     }
 
-    // Prepare filter
-    const where = {};
     if (organisationId) where.organisationId = organisationId;
     if (isActive !== undefined) where.isActive = isActive === 'true';
 
@@ -27,13 +30,15 @@ const getAllQueues = async (req, res) => {
             code: true
           }
         },
-        _count: {
+        tokens: {
+          where: {
+            status: { in: ['PENDING', 'CALLED'] }
+          },
           select: {
-            tokens: {
-              where: {
-                status: { in: ['PENDING', 'CALLED'] }
-              }
-            }
+            id: true,
+            status: true,
+            tokenId: true,
+            updatedAt: true
           }
         }
       },
@@ -41,18 +46,31 @@ const getAllQueues = async (req, res) => {
         createdAt: 'desc'
       }
     });
+    // Format queues with current token and counts
+    const formattedQueues = queues.map((queue) => {
+      // Safely access tokens array
+      const tokens = queue.tokens || [];
+      // Find the current CALLED token
+      const currentToken = tokens.find(t => t.status === 'CALLED');
+      // Count PENDING tokens (waiting)
+      const waitingCount = tokens.filter(t => t.status === 'PENDING').length;
 
-    const formattedQueues = queues.map(queue => ({
-      id: queue.id,
-      name: queue.name,
-      description: queue.description,
-      maxTokens: queue.maxTokens,
-      averageTime: queue.averageTime,
-      isActive: queue.isActive,
-      organisation: queue.organisation,
-      waitingCount: queue._count.tokens,
-      createdAt: queue.createdAt
-    }));
+      return {
+        id: queue.id,
+        name: queue.name,
+        description: queue.description,
+        maxTokens: queue.maxTokens,
+        averageTime: queue.averageTime,
+        isActive: queue.isActive,
+        organisation: queue.organisation,
+        currentToken: currentToken?.tokenId || null,
+        _count: {
+          tokens: waitingCount
+        },
+        waitingCount: waitingCount,
+        createdAt: queue.createdAt
+      };
+    });
 
     res.json({
       success: true,
@@ -62,7 +80,8 @@ const getAllQueues = async (req, res) => {
     console.error('Get all queues error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to retrieve queues'
+      message: 'Failed to retrieve queues',
+      error: error.message
     });
   }
 };
@@ -187,7 +206,7 @@ const getQueuesByOrganisation = async (req, res) => {
 // Create queue
 const createQueue = async (req, res) => {
   try {
-    const { name, description, organisationId, maxTokens, averageTime } = req.body;
+    const { name, description, organisationId, adminId, maxTokens, averageTime } = req.body;
 
     // Verify user has access to this organisation
     if (req.user.role !== 'SUPER_ADMIN' && req.user.organisationId !== organisationId) {
@@ -202,6 +221,7 @@ const createQueue = async (req, res) => {
         name,
         description,
         organisationId,
+        adminId: adminId || (req.user.role === 'ORGANISATION_ADMIN' ? req.user.id : null),
         maxTokens,
         averageTime,
         isActive: true

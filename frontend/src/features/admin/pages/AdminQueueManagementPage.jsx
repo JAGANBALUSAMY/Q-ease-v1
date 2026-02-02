@@ -13,6 +13,8 @@ const AdminQueueManagementPage = () => {
 
   // State for list view
   const [queues, setQueues] = useState([]);
+  const [organisations, setOrganisations] = useState([]);
+  const [admins, setAdmins] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -22,6 +24,8 @@ const AdminQueueManagementPage = () => {
   const [queue, setQueue] = useState({
     name: '',
     description: '',
+    organisationId: '',
+    adminId: '',
     averageTime: 5,
     maxTokens: 50,
     isActive: true,
@@ -73,33 +77,54 @@ const AdminQueueManagementPage = () => {
   // Handle initial data loading based on route
   useEffect(() => {
     if (!queueId) {
-      // List View
       loadQueues();
     } else if (queueId === 'new') {
-      // Create New View - No loading needed, show form immediately
+      if (user?.role !== 'SUPER_ADMIN') {
+        navigate('/admin/queues');
+        return;
+      }
       setLoading(false);
-      // Reset form to default for new queue
       setQueue({
         name: '',
         description: '',
+        organisationId: '',
+        adminId: '',
         averageTime: 5,
         maxTokens: 50,
         isActive: true,
-        operatingHours: {
-          start: '09:00',
-          end: '17:00'
-        },
-        prioritySettings: {
-          emergencyEnabled: true,
-          priorityEnabled: true,
-          maxPriorityPerDay: 10
-        }
+        operatingHours: { start: '09:00', end: '17:00' },
+        prioritySettings: { emergencyEnabled: true, priorityEnabled: true, maxPriorityPerDay: 10 }
       });
+      if (user?.role === 'SUPER_ADMIN') {
+        loadOrganisations();
+        loadAdmins();
+      }
     } else {
-      // Edit/Detail View
       loadQueueDetails();
+      if (user?.role === 'SUPER_ADMIN') {
+        loadOrganisations();
+        loadAdmins();
+      }
     }
-  }, [queueId]);
+  }, [queueId, user]);
+
+  const loadOrganisations = async () => {
+    try {
+      const response = await api.get('/organisations');
+      setOrganisations(response.data.data.organisations || []);
+    } catch (err) {
+      console.error('Error loading organisations:', err);
+    }
+  };
+
+  const loadAdmins = async () => {
+    try {
+      const response = await api.get('/super/admins');
+      setAdmins(response.data.data || []);
+    } catch (err) {
+      console.error('Error loading admins:', err);
+    }
+  };
 
   const loadQueues = async () => {
     try {
@@ -226,9 +251,8 @@ const AdminQueueManagementPage = () => {
         // Create new queue
         console.log('User object:', user);
 
-        // Handle nested organisation object (fallback)
-        const orgId = user?.organisationId || user?.organisation?.id;
-        console.log('Resolved Organisation ID:', orgId);
+        // For Super Admin, use selected org. For others, use user.organisationId
+        const orgId = user?.role === 'SUPER_ADMIN' ? queue.organisationId : (user?.organisationId || user?.organisation?.id);
 
         const payload = {
           ...queue,
@@ -238,7 +262,7 @@ const AdminQueueManagementPage = () => {
         console.log('Sending payload:', payload);
 
         if (!payload.organisationId) {
-          setError(`Error: Organisation ID is missing. Please re-login. (Role: ${user?.role})`);
+          setError(`Error: Organisation ID is missing. Please select an organisation. (Role: ${user?.role})`);
           setSaving(false);
           return;
         }
@@ -268,12 +292,14 @@ const AdminQueueManagementPage = () => {
           <p>Manage and configure service queues for your organization</p>
 
           <div className="header-actions">
-            <button
-              onClick={handleCreateNew}
-              className="create-button"
-            >
-              + Create New Queue
-            </button>
+            {user?.role === 'SUPER_ADMIN' && (
+              <button
+                onClick={handleCreateNew}
+                className="create-button"
+              >
+                + Create New Queue
+              </button>
+            )}
           </div>
         </div>
 
@@ -318,8 +344,8 @@ const AdminQueueManagementPage = () => {
             <div className="empty-state">
               <div className="empty-icon">📋</div>
               <h3>No queues found</h3>
-              <p>{searchTerm ? 'Try adjusting your search criteria' : 'Get started by creating your first queue'}</p>
-              {!searchTerm && (
+              <p>{searchTerm ? 'Try adjusting your search criteria' : (user?.role === 'SUPER_ADMIN' ? 'Get started by creating your first queue' : 'No queues have been assigned to you yet. Please contact a Super Admin.')}</p>
+              {!searchTerm && user?.role === 'SUPER_ADMIN' && (
                 <button onClick={handleCreateNew} className="create-button">
                   Create Your First Queue
                 </button>
@@ -447,6 +473,44 @@ const AdminQueueManagementPage = () => {
               rows="3"
             />
           </div>
+
+          {user?.role === 'SUPER_ADMIN' && (
+            <>
+              <div className="form-group">
+                <label htmlFor="organisationId">Organisation *</label>
+                <select
+                  id="organisationId"
+                  value={queue.organisationId}
+                  onChange={(e) => handleInputChange('organisationId', e.target.value)}
+                  required
+                >
+                  <option value="">Select Organisation</option>
+                  {organisations.map(org => (
+                    <option key={org.id} value={org.id}>{org.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="adminId">Assign Administrator *</label>
+                <select
+                  id="adminId"
+                  value={queue.adminId}
+                  onChange={(e) => handleInputChange('adminId', e.target.value)}
+                  required
+                >
+                  <option value="">Select Admin</option>
+                  {admins
+                    .filter(admin => !queue.organisationId || admin.organisationId === queue.organisationId)
+                    .map(admin => (
+                      <option key={admin.id} value={admin.id}>{admin.firstName} {admin.lastName} ({admin.email})</option>
+                    ))
+                  }
+                </select>
+                <p className="form-help">Only the assigned admin will be able to see and manage this queue.</p>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="form-section">
