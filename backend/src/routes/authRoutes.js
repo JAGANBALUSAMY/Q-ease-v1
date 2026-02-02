@@ -1,6 +1,16 @@
 const express = require('express');
 const router = express.Router();
-const { registerUser, loginUser, staffLogin, adminLogin, superAdminLogin } = require('../controllers/authController');
+const {
+    registerUser,
+    loginUser,
+    staffLogin,
+    adminLogin,
+    superAdminLogin,
+    selectRole,
+    assignRoleToUser,
+    removeRoleFromUser,
+    getUserRoles
+} = require('../controllers/authController');
 const { googleLogin } = require('../controllers/googleAuthController');
 const { validateRegister, validateLogin, validateStaffLogin } = require('../middleware/validationMiddleware');
 

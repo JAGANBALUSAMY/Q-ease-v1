@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateToken, requireRole } = require('../middleware/authMiddleware');
+const { authenticateToken, authorizeRoles } = require('../middleware/authMiddleware');
 const {
     getRequestLogs,
     getSystemHealth,
@@ -10,7 +10,7 @@ const {
 
 // All system routes require ADMIN or SUPER_ADMIN role
 router.use(authenticateToken);
-router.use(requireRole(['ORGANISATION_ADMIN', 'SUPER_ADMIN']));
+router.use(authorizeRoles(['ORGANISATION_ADMIN', 'SUPER_ADMIN']));
 
 // Request logs
 router.get('/request-logs', getRequestLogs);

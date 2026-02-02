@@ -24,18 +24,19 @@ model User {
   updatedAt      DateTime @updatedAt
 
   // Relations
-  organisation  Organisation?  @relation(fields: [organisationId], references: [id])
-  roleModel     RoleModel      @relation(fields: [roleId], references: [id])
-  userRoles     UserRole[]     @relation("UserToUserRoles")
-  userTokens    Token[]        @relation("UserTokens")
-  notifications  Notification[]
-  calledTokens   Token[]        @relation("TokenCaller")
-  userTokens     Token[]        @relation("UserTokens")
-  auditLogs      UserAuditLog[] @relation("UserAuditLogs")
-  creator        User?          @relation("UserLineage", fields: [creatorId], references: [id])
-  createdUsers   User[]         @relation("UserLineage")
-  organisation   Organisation?  @relation(fields: [organisationId], references: [id])
-  roleModel      RoleModel      @relation(fields: [roleId], references: [id])
+  organisation  Organisation? @relation(fields: [organisationId], references: [id])
+  roleModel     RoleModel     @relation(fields: [roleId], references: [id])
+  userRoles     UserRole[]    @relation("UserToUserRoles")
+  userTokens    Token[]       @relation("UserTokens")
+  notifications Notification[]
+  calledTokens  Token[]       @relation("TokenCaller")
+  auditLogs     UserAuditLog[] @relation("UserAuditLogs")
+  
+  // Lineage Security
+  creatorId     String?
+  creator       User?          @relation("UserLineage", fields: [creatorId], references: [id])
+  createdUsers  User[]         @relation("UserLineage")
+  assignedQueues Queue[]       @relation("AdminQueues")
 
   @@index([email])
   @@index([organisationId])
@@ -189,3 +190,48 @@ enum MetricType {
   STAFF_EFFICIENCY
   PEAK_HOURS
 }
+
+// UserRole junction table for many-to-many relationship
+model UserRole {
+  id        String   @id @default(cuid())
+  userId    String
+  roleId    String
+  createdAt DateTime @default(now())
+
+  // Relations
+  user      User      @relation("UserToUserRoles", fields: [userId], references: [id], onDelete: Cascade)
+  role      RoleModel @relation("RoleToUserRoles", fields: [roleId], references: [id], onDelete: Cascade)
+
+  // Unique constraint to prevent duplicate role assignments
+  @@unique([userId, roleId])
+}
+
+// User audit log for tracking meaningful actions
+model UserAuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  // Relations
+  user      User      @relation("UserAuditLogs", fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Token status enumeration
+enum TokenStatus {
+  PENDING
+  CALLED
+  SERVED
+  CANCELLED
+  MISSED
+  ABANDONED
+}
+
+// Token priority enumeration
+enum TokenPriority {
+  NORMAL
+  PRIORITY
+  EMERGENCY
+}
+
