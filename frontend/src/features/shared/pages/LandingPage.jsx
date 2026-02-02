@@ -5,15 +5,33 @@ import api from '../../../services/api';
 import '../styles/LandingPage.css';
 
 const LandingPage = () => {
-    const { user } = useAuth();
+    const { user, loading } = useAuth();
     const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState('');
     const [publicQueues, setPublicQueues] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loadingQueues, setLoadingQueues] = useState(true);
 
+    // Redirect if user is logged in
     useEffect(() => {
+        if (loading) return;
+
+        // If user is logged in, redirect to their dashboard
+        if (user) {
+            if (user.role === 'SUPER_ADMIN' || user.role === 'ORGANISATION_ADMIN') {
+                navigate('/admin/dashboard', { replace: true });
+            } else if (user.role === 'STAFF') {
+                navigate('/staff/dashboard', { replace: true });
+            } else if (user.role === 'CUSTOMER') {
+                navigate('/browse', { replace: true });
+            }
+        }
+    }, [user, loading, navigate]);
+
+    // Fetch public queues only when not logged in
+    useEffect(() => {
+        if (loading || user) return;
         fetchPublicQueues();
-    }, []);
+    }, [loading, user]);
 
     const fetchPublicQueues = async () => {
         try {
@@ -24,7 +42,7 @@ const LandingPage = () => {
         } catch (error) {
             console.error('Failed to fetch public queues:', error);
         } finally {
-            setLoading(false);
+            setLoadingQueues(false);
         }
     };
 
@@ -42,6 +60,21 @@ const LandingPage = () => {
             navigate('/login', { state: { from: `/queue/${queueId}` } });
         }
     };
+
+    // While loading auth or redirecting, show loading screen
+    if (loading || user) {
+        return (
+            <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: '100vh',
+                background: 'var(--gray-50)'
+            }}>
+                <div className="spinner spinner-primary"></div>
+            </div>
+        );
+    }
 
     const features = [
         {

@@ -112,8 +112,12 @@ const AdminDashboardPage = () => {
       ),
       color: 'warning',
       onClick: () => navigate('/admin/analytics')
-    },
-    {
+    }
+  ];
+
+  // Add "Manage Admins" if Super Admin
+  if (user?.role === 'SUPER_ADMIN') {
+    quickActions.unshift({
       title: 'Settings',
       icon: (
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -123,10 +127,9 @@ const AdminDashboardPage = () => {
       ),
       color: 'secondary',
       onClick: () => navigate('/admin/settings')
-    }
-  ];
+    });
+  }
 
-  // Add "Manage Admins" if Super Admin
   if (user?.role === 'SUPER_ADMIN') {
     quickActions.unshift({
       title: 'Manage Admins',
@@ -281,32 +284,6 @@ const AdminDashboardPage = () => {
               </button>
             ))}
           </div>
-        </div>
-
-        {/* Recent Activity */}
-        <div className="recent-activity-section">
-          <h2>Recent Activity</h2>
-          {recentActivity.length > 0 ? (
-            <div className="activity-list">
-              {recentActivity.slice(0, 10).map((activity, index) => (
-                <div key={index} className="activity-item">
-                  <div className="activity-icon">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                  </div>
-                  <div className="activity-content">
-                    <p className="activity-text">{activity.description}</p>
-                    <span className="activity-time">{activity.timestamp}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="empty-activity">
-              <p>No recent activity</p>
-            </div>
-          )}
         </div>
       </div>
     </div>
