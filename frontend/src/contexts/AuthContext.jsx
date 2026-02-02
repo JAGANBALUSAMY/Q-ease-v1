@@ -16,21 +16,27 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is already logged in
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
+  const token = localStorage.getItem('token');
 
-    if (token && userData) {
-      try {
-        setUser(JSON.parse(userData));
-      } catch (err) {
-        // Invalid user data, clear storage
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-      }
-    }
+  if (!token) {
     setLoading(false);
-  }, []);
+    return;
+  }
+
+  api.get('/users/profile')
+    .then(res => {
+      const user = res.data.data.user;
+      setUser(user);
+      localStorage.setItem('user', JSON.stringify(user));
+    })
+    .catch(() => {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setUser(null);
+    })
+    .finally(() => setLoading(false));
+}, []);
+
 
   const login = async (identifier, password, roleType = 'customer') => {
     try {

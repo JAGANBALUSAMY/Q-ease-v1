@@ -18,13 +18,14 @@ const authenticateToken = async (req, res, next) => {
 
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
+      console.log('Decoded JWT:', decoded);
       // Attach user info to request
       req.user = {
-        id: decoded.id,
-        role: decoded.role,
-        organisationId: decoded.organisationId
-      };
+  id: decoded.userId.id,
+  role: decoded.userId.role,
+  organisationId: decoded.userId.organisationId
+};
+
 
       next();
     } catch (jwtError) {
