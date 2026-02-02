@@ -134,7 +134,7 @@ const getAdminStats = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Admin error:', error);
+    console.error('Admin            fasdf error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch admin stats' });
   }
 };
