@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '../../../utils/api';
+import notificationService from '../../../services/notificationService';
 import '../styles/NotificationsPage.css';
 
 const NotificationsPage = () => {
@@ -7,8 +7,8 @@ const NotificationsPage = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Fetch notifications (placeholder logic)
-        // api.get('/notifications').then...
+        const data = notificationService.getNotifications();
+        setNotifications(data);
         setLoading(false);
     }, []);
 
@@ -20,7 +20,18 @@ const NotificationsPage = () => {
                     <p>Loading...</p>
                 ) : (
                     <div className="notifications-list">
-                        <p>No new notifications</p>
+                        {notifications.length === 0 ? (
+                            <p>No new notifications</p>
+                        ) : (
+                            notifications.map((n) => (
+                                <div key={n.id} className="notification-item">
+                                    <div className="notification-content">
+                                        <div className="notification-text"><strong>{n.title}</strong> — {n.body}</div>
+                                        <div className="notification-time">{new Date(n.createdAt).toLocaleString()}</div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
                     </div>
                 )}
             </div>

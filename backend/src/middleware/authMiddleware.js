@@ -19,13 +19,12 @@ const authenticateToken = async (req, res, next) => {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      // Attach user info to request (handle root properties or legacy nested from bug)
+      // Attach user info to request. Support multiple claim names and handle potential legacy objects.
       const userData = decoded.userId && typeof decoded.userId === 'object' ? decoded.userId : decoded;
-
       req.user = {
-        id: userData.id || userData.userId,
-        role: (userData.role || userData.roleId || '').toUpperCase(),
-        organisationId: userData.organisationId
+        id: userData.id || userData.userId || userData.user_id,
+        role: String(userData.role || userData.roleId || userData.role_id || '').toUpperCase(),
+        organisationId: userData.organisationId || userData.organisation_id
       };
 
       next();
@@ -61,10 +60,11 @@ const authorizeRoles = (allowedRoles) => {
       });
     }
 
-    const userRole = req.user.role ? req.user.role.toUpperCase() : '';
+    // Case-insensitive role comparison
+    const userRole = String(req.user.role || '').toUpperCase();
     const roles = Array.isArray(allowedRoles)
-      ? allowedRoles.map(r => r.toUpperCase())
-      : [allowedRoles.toUpperCase()];
+      ? allowedRoles.map(r => String(r).toUpperCase())
+      : [String(allowedRoles).toUpperCase()];
 
     if (!roles.includes(userRole)) {
       console.log(`❌ AUTH FAILED: User role "${userRole}" not in [${roles}]`);
@@ -87,7 +87,7 @@ const checkOrganisationAccess = async (req, res, next) => {
     const userOrgId = req.user.organisationId;
 
     // Super admin can access all organizations
-    if (req.user.role === 'SUPER_ADMIN') {
+    if (String(req.user.role || '').toUpperCase() === 'SUPER_ADMIN') {
       return next();
     }
 
@@ -134,12 +134,12 @@ const checkQueueAccess = async (req, res, next) => {
     }
 
     // Super admin can access all queues
-    if (req.user.role === 'SUPER_ADMIN') {
+    if (String(req.user.role || '').toUpperCase() === 'SUPER_ADMIN') {
       return next();
     }
 
     // Regular users can join any queue
-    if (req.user.role === 'USER') {
+    if (String(req.user.role || '').toUpperCase() === 'USER') {
       return next();
     }
 
@@ -185,9 +185,9 @@ const optionalAuth = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = {
-      id: decoded.id,
-      role: decoded.role,
-      organisationId: decoded.organisationId
+      id: decoded.id || decoded.userId || decoded.user_id,
+      role: decoded.role || decoded.roleId || decoded.role_id,
+      organisationId: decoded.organisationId || decoded.organisation_id || decoded.organisationId
     };
   } catch (error) {
     // Invalid token, but don't block request

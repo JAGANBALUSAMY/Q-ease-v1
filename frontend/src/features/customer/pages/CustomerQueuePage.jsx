@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../../contexts/AuthContext';
 import api from '../../../services/api';
+import notificationService from '../../../services/notificationService';
 import '../styles/CustomerQueuePage.css';
 
 const CustomerQueuePage = () => {
@@ -13,6 +14,7 @@ const CustomerQueuePage = () => {
     const [loading, setLoading] = useState(true);
     const [joining, setJoining] = useState(false);
     const [error, setError] = useState(null);
+    const [toast, setToast] = useState(null);
 
     useEffect(() => {
         fetchQueueDetails();
@@ -39,13 +41,26 @@ const CustomerQueuePage = () => {
 
         try {
             setJoining(true);
-            await api.post('/tokens', { queueId });
+            const resp = await api.post('/tokens', { queueId });
+            // create a notification and persist it
+            const bodyText = queue && queue.name ? `You joined ${queue.name}.` : 'Your token was generated.';
+            notificationService.addNotification({
+                title: 'Token Generated',
+                body: bodyText,
+                data: resp?.data || null,
+            });
+
+            // show a small toast message
+            setToast({ type: 'success', message: 'Token generated successfully' });
+            setTimeout(() => setToast(null), 4000);
+
+            // navigate to my tokens
             navigate('/my-tokens');
         } catch (err) {
             console.error('Error joining queue:', err);
-            // Check for specific error message
             const msg = err.response?.data?.message || 'Failed to join queue';
-            alert(msg);
+            setToast({ type: 'error', message: msg });
+            setTimeout(() => setToast(null), 4000);
         } finally {
             setJoining(false);
         }
@@ -78,6 +93,11 @@ const CustomerQueuePage = () => {
 
     return (
         <div className="customer-queue-page">
+            {toast && (
+                <div className={`qe-toast qe-toast-${toast.type}`} style={{position: 'fixed', right: 20, top: 80, zIndex:9999}}>
+                    {toast.message}
+                </div>
+            )}
             <div className="container">
                 <div className="queue-detail-card">
                     <div className="queue-header">
