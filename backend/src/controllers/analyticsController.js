@@ -55,7 +55,7 @@ const getAdminStats = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Admin stats error:', error);
+    console.error('Admin s error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch admin stats' });
   }
 };
