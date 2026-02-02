@@ -18,8 +18,8 @@ const authenticateToken = async (req, res, next) => {
 
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
       // Attach user info to request. Support multiple claim names and handle potential legacy objects.
+      console.log('Decoded JWT:', decoded);
       const userData = decoded.userId && typeof decoded.userId === 'object' ? decoded.userId : decoded;
       req.user = {
         id: userData.id || userData.userId || userData.user_id,

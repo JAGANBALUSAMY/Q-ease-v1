@@ -10,56 +10,33 @@ const { getUserNotifications, markNotificationAsRead } = require('../services/no
 
 // Get user profile
 const getUserProfile = async (req, res) => {
-    try {
-        const userId = req.user.id;
+  try {
+    const user = await prisma.user.findFirst({
+      where: { id: req.user.id }
+    });
 
-        const user = await prisma.user.findUnique({
-            where: { id: userId },
-            select: {
-                id: true,
-                email: true,
-                firstName: true,
-                lastName: true,
-                phoneNumber: true,
-                role: true,
-                organisationId: true,
-                isVerified: true,
-                isActive: true,
-                createdAt: true,
-                roleModel: {
-                    select: {
-                        name: true,
-                        description: true
-                    }
-                },
-                organisation: {
-                    select: {
-                        id: true,
-                        name: true,
-                        code: true
-                    }
-                }
-            }
-        });
-
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: 'User not found'
-            });
-        }
-
-        res.json({
-            success: true,
-            data: { user }
-        });
-    } catch (error) {
-        console.error('Get user profile error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to get user profile'
-        });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
     }
+
+    res.json({
+      success: true,
+      data: {
+        user: {
+          firstName: user.firstName || '',
+          lastName: user.lastName || '',
+          email: user.email || '',
+          phone: user.phoneNumber || ''
+        }
+      }
+    });
+  } catch (err) {
+    console.error('PROFILE ERROR:', err);
+    res.status(500).json({ message: 'Profile failed' });
+  }
 };
 
 // Update user profile

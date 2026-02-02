@@ -40,7 +40,16 @@ const ProfilePage = () => {
       setError('');
       
       const response = await api.get('/users/profile');
-      setProfile(response.data.data.user);
+      const user = response.data.data.user;
+
+setProfile(prev => ({
+  ...prev,
+  firstName: user.firstName ?? '',
+  lastName: user.lastName ?? '',
+  email: user.email ?? '',
+  phone: user.phone ?? ''
+}));
+
     } catch (err) {
       setError('Failed to load profile');
       console.error('Error loading profile:', err);
@@ -210,7 +219,7 @@ const ProfilePage = () => {
               <label className="switch">
                 <input
                   type="checkbox"
-                  checked={profile.notificationPreferences.email}
+                  checked={profile.notificationPreferences?.email ?? false}
                   onChange={(e) => handleInputChange('notificationPreferences.email', e.target.checked)}
                 />
                 <span className="slider"></span>
@@ -266,15 +275,18 @@ const ProfilePage = () => {
             </div>
             
             <div className="security-item">
-              <h3>Password</h3>
-              <p>Last changed: {profile.securitySettings.passwordLastChanged || 'Never'}</p>
-              <button 
-                onClick={() => document.getElementById('password-modal').showModal()}
-                className="change-password-button"
-              >
-                Change Password
-              </button>
-            </div>
+  <h3>Password</h3>
+  <p>
+    Last changed: {profile.securitySettings?.passwordLastChanged || 'Never'}
+  </p>
+  <button 
+    onClick={() => document.getElementById('password-modal').showModal()}
+    className="change-password-button"
+  >
+    Change Password
+  </button>
+</div>
+
           </div>
         </div>
 
