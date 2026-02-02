@@ -19,11 +19,11 @@ const authenticateToken = async (req, res, next) => {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      // Attach user info to request
+      // Attach user info to request. Support multiple claim names from tokens
       req.user = {
-        id: decoded.id,
-        role: decoded.role,
-        organisationId: decoded.organisationId
+        id: decoded.id || decoded.userId || decoded.user_id,
+        role: decoded.role || decoded.roleId || decoded.role_id,
+        organisationId: decoded.organisationId || decoded.organisation_id || decoded.organisationId
       };
 
       next();
@@ -59,7 +59,11 @@ const authorizeRoles = (allowedRoles) => {
       });
     }
 
-    if (!allowedRoles.includes(req.user.role)) {
+    // Case-insensitive role comparison
+    const allowedNormalized = allowedRoles.map(r => String(r).toUpperCase());
+    const userRole = String(req.user.role || '').toUpperCase();
+
+    if (!allowedNormalized.includes(userRole)) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to access this resource',
@@ -79,7 +83,7 @@ const checkOrganisationAccess = async (req, res, next) => {
     const userOrgId = req.user.organisationId;
 
     // Super admin can access all organizations
-    if (req.user.role === 'SUPER_ADMIN') {
+    if (String(req.user.role || '').toUpperCase() === 'SUPER_ADMIN') {
       return next();
     }
 
@@ -119,12 +123,12 @@ const checkQueueAccess = async (req, res, next) => {
     }
 
     // Super admin can access all queues
-    if (req.user.role === 'SUPER_ADMIN') {
+    if (String(req.user.role || '').toUpperCase() === 'SUPER_ADMIN') {
       return next();
     }
 
     // Regular users can join any queue
-    if (req.user.role === 'USER') {
+    if (String(req.user.role || '').toUpperCase() === 'USER') {
       return next();
     }
 
@@ -160,9 +164,9 @@ const optionalAuth = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = {
-      id: decoded.id,
-      role: decoded.role,
-      organisationId: decoded.organisationId
+      id: decoded.id || decoded.userId || decoded.user_id,
+      role: decoded.role || decoded.roleId || decoded.role_id,
+      organisationId: decoded.organisationId || decoded.organisation_id || decoded.organisationId
     };
   } catch (error) {
     // Invalid token, but don't block request
