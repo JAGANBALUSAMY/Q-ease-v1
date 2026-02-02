@@ -41,6 +41,9 @@ const Navbar = () => {
                     <div className="navbar-links desktop-only">
                         {user ? (
                             <>
+                                <Link to="/" className="nav-link">Home</Link>
+                                <Link to="/about" className="nav-link">About</Link>
+                                
                                 {/* Customer Links */}
                                 {(!user.role || user.role === 'customer' || user.role === 'USER') && (
                                     <>
@@ -94,12 +97,7 @@ const Navbar = () => {
                                     </>
                                 )}
                             </>
-                        ) : (
-                            <>
-                                <Link to="/" className="nav-link">Home</Link>
-                                <Link to="/about" className="nav-link">About</Link>
-                            </>
-                        )}
+                        ) : null}
                     </div>
 
                     {/* User Menu */}

@@ -1,3 +1,4 @@
+// Q-Ease Database Schema
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,133 +8,138 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// User model
 model User {
-  id             String         @id @default(cuid())
-  email          String         @unique
+  id             String   @id @default(cuid())
+  email          String   @unique
   password       String?
   firstName      String
   lastName       String
   phoneNumber    String?
   organisationId String?
   roleId         String
-  isVerified     Boolean        @default(false)
-  isActive       Boolean        @default(true)
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  creatorId      String?
-  notifications  Notification[]
-  calledTokens   Token[]        @relation("TokenCaller")
-  userTokens     Token[]        @relation("UserTokens")
-  creator        User?          @relation("UserLineage", fields: [creatorId], references: [id])
-  createdUsers   User[]         @relation("UserLineage")
-  organisation   Organisation?  @relation(fields: [organisationId], references: [id])
-  roleModel      RoleModel      @relation(fields: [roleId], references: [id])
+  isVerified     Boolean  @default(false)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  organisation  Organisation?  @relation(fields: [organisationId], references: [id])
+  roleModel     RoleModel      @relation(fields: [roleId], references: [id])
+  userRoles     UserRole[]     @relation("UserToUserRoles")
+  userTokens    Token[]        @relation("UserTokens")
+  notifications Notification[]
+  calledTokens  Token[]        @relation("TokenCaller")
+  
+  // Lineage Security
+  creatorId     String?
+  creator       User?          @relation("UserLineage", fields: [creatorId], references: [id])
+  createdUsers  User[]         @relation("UserLineage")
 }
 
+// UserRole junction table for many-to-many relationship
+model UserRole {
+  id        String   @id @default(cuid())
+  userId    String
+  roleId    String
+  createdAt DateTime @default(now())
+
+  // Relations
+  user      User      @relation("UserToUserRoles", fields: [userId], references: [id], onDelete: Cascade)
+  role      RoleModel @relation("RoleToUserRoles", fields: [roleId], references: [id], onDelete: Cascade)
+
+  // Unique constraint to prevent duplicate role assignments
+  @@unique([userId, roleId])
+}
+
+// Role model
 model RoleModel {
   id          String   @id @default(cuid())
-  name        String   @unique
+  name        String   @unique // SUPER_ADMIN, ORGANISATION_ADMIN, STAFF, USER
   description String?
+  permissions Json? // Store permissions as JSON
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  permissions Json?
   users       User[]
+  userRoles   UserRole[] @relation("RoleToUserRoles")
 }
 
+// Organisation model
 model Organisation {
-  id            String         @id @default(cuid())
-  code          String         @unique
-  name          String
-  description   String?
-  address       String?
-  city          String?
-  state         String?
-  country       String?
-  latitude      Float?
-  longitude     Float?
-  contactEmail  String?
-  contactPhone  String?
-  logoUrl       String?
-  isVerified    Boolean        @default(false)
-  isActive      Boolean        @default(true)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  analytics     Analytics[]
-  notifications Notification[]
+  id           String   @id @default(cuid())
+  code         String   @unique // 6-digit unique code
+  name         String
+  description  String?
+  address      String?
+  city         String?
+  state        String?
+  country      String?
+  latitude     Float?
+  longitude    Float?
+  contactEmail String?
+  contactPhone String?
+  logoUrl      String?
+  isVerified   Boolean  @default(false)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  users         User[]
   queues        Queue[]
   tokens        Token[]
-  users         User[]
+  notifications Notification[]
+  analytics     Analytics[]
 }
 
+
+
+// Queue model
 model Queue {
-  id             String       @id @default(cuid())
+  id             String   @id @default(cuid())
   organisationId String
-  name           String
+  name           String // Name of the queue (e.g., "Cashier", "Help Desk")
   description    String?
-  maxTokens      Int?
-  averageTime    Int?
-  isActive       Boolean      @default(true)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  analytics      Analytics[]
-  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
-  tokens         Token[]
+  maxTokens      Int? // Max number of tokens allowed per day
+  averageTime    Int? // Average service time in minutes
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  tokens       Token[]
+  analytics    Analytics[]
 }
 
+// Token model
 model Token {
   id             String        @id @default(cuid())
-  tokenId        String
+  tokenId        String // Unique token identifier (e.g., A001, B023)
   queueId        String
   userId         String?
   organisationId String
   status         TokenStatus   @default(PENDING)
   priority       TokenPriority @default(NORMAL)
-  position       Int?
-  estimatedTime  DateTime?
+  position       Int? // Current position in queue
+  estimatedTime  DateTime? // Estimated service time
   issuedAt       DateTime      @default(now())
   calledAt       DateTime?
   servedAt       DateTime?
   cancelledAt    DateTime?
-  callerId       String?
+  callerId       String? // Staff member who called the token
   notes          String?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
-  caller         User?         @relation("TokenCaller", fields: [callerId], references: [id])
-  organisation   Organisation  @relation(fields: [organisationId], references: [id], onDelete: Cascade)
-  queue          Queue         @relation(fields: [queueId], references: [id], onDelete: Cascade)
-  tokenUser      User?         @relation("UserTokens", fields: [userId], references: [id])
+
+  // Relations
+  queue        Queue        @relation(fields: [queueId], references: [id], onDelete: Cascade)
+  tokenUser    User?        @relation("UserTokens", fields: [userId], references: [id])
+  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  caller       User?        @relation("TokenCaller", fields: [callerId], references: [id])
 }
 
-model Notification {
-  id             String           @id @default(cuid())
-  userId         String
-  organisationId String?
-  title          String
-  message        String
-  type           NotificationType
-  data           Json?
-  isRead         Boolean          @default(false)
-  sentAt         DateTime?        @default(now())
-  deliveredAt    DateTime?
-  clickedAt      DateTime?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  organisation   Organisation?    @relation(fields: [organisationId], references: [id])
-  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model Analytics {
-  id             String       @id @default(cuid())
-  organisationId String
-  queueId        String?
-  metricType     MetricType
-  metricValue    Float
-  date           DateTime     @default(now())
-  metadata       Json?
-  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
-  queue          Queue?       @relation(fields: [queueId], references: [id])
-}
-
+// Token status enumeration
 enum TokenStatus {
   PENDING
   CALLED
@@ -143,12 +149,35 @@ enum TokenStatus {
   ABANDONED
 }
 
+// Token priority enumeration
 enum TokenPriority {
   NORMAL
   PRIORITY
   EMERGENCY
 }
 
+// Notification model
+model Notification {
+  id             String           @id @default(cuid())
+  userId         String
+  organisationId String?
+  title          String
+  message        String
+  type           NotificationType
+  data           Json? // Additional data for the notification
+  isRead         Boolean          @default(false)
+  sentAt         DateTime?        @default(now())
+  deliveredAt    DateTime?
+  clickedAt      DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  // Relations
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organisation Organisation? @relation(fields: [organisationId], references: [id])
+}
+
+// Notification type enumeration
 enum NotificationType {
   TOKEN_ISSUED
   TOKEN_CALLED
@@ -158,6 +187,22 @@ enum NotificationType {
   PROMOTIONAL
 }
 
+// Analytics model
+model Analytics {
+  id             String     @id @default(cuid())
+  organisationId String
+  queueId        String?
+  metricType     MetricType
+  metricValue    Float
+  date           DateTime   @default(now())
+  metadata       Json? // Additional analytics data
+
+  // Relations
+  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  queue        Queue?       @relation(fields: [queueId], references: [id], onDelete: SetNull)
+}
+
+// Metric type enumeration
 enum MetricType {
   AVERAGE_WAIT_TIME
   QUEUE_LENGTH

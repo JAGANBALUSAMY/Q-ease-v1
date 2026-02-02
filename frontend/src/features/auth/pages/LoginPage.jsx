@@ -6,21 +6,18 @@ import '../styles/LoginPage.css';
 const LoginPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useAuth();
+  const { login, selectRole } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [role, setRole] = useState('customer');
-
-  const ROLES = [
-    { id: 'customer', label: 'Customer' },
-    { id: 'staff', label: 'Staff' },
-    { id: 'admin', label: 'Admin' },
-    { id: 'super_admin', label: 'Super Admin' }
-  ];
+  
+  // State for role selection modal
+  const [requiresRoleSelection, setRequiresRoleSelection] = useState(false);
+  const [availableRoles, setAvailableRoles] = useState([]);
+  const [userId, setUserId] = useState(null);
 
   const handleChange = (e) => {
     setFormData({
@@ -30,32 +27,93 @@ const LoginPage = () => {
     setError('');
   };
 
+  const handleRoleSelection = async (selectedRole) => {
+    setLoading(true);
+    setError('');
+    
+    const result = await selectRole(userId, selectedRole);
+    
+    if (result.success) {
+      handleRedirect(result.user.role);
+    } else {
+      setError(result.message);
+    }
+    setLoading(false);
+  };
+
+  const handleRedirect = (userRole) => {
+    const from = location.state?.from?.pathname || location.state?.from || '/';
+
+    if (userRole === 'STAFF') {
+      navigate('/staff/dashboard');
+    } else if (userRole === 'ORGANISATION_ADMIN' || userRole === 'ADMIN') {
+      navigate('/admin/dashboard');
+    } else if (userRole === 'SUPER_ADMIN') {
+      navigate('/super-admin/dashboard');
+    } else {
+      navigate(from === '/' ? '/' : from);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    const result = await login(formData.email, formData.password, role);
+    const result = await login(formData.email, formData.password);
 
     if (result.success) {
-      // Role based redirect
-      const from = location.state?.from?.pathname || location.state?.from || '/';
-
-      if (role === 'staff') {
-        navigate('/staff/dashboard');
-      } else if (role === 'admin') {
-        navigate('/admin/dashboard');
-      } else if (role === 'super_admin') {
-        navigate('/super-admin/dashboard');
+      if (result.requiresRoleSelection) {
+        setRequiresRoleSelection(true);
+        setAvailableRoles(result.availableRoles);
+        setUserId(result.userId);
       } else {
-        // For customers/users, respect the redirect or go home
-        navigate(from === '/' ? '/' : from);
+        handleRedirect(result.user.role || result.user.roleModel?.name);
       }
     } else {
-      setError(result.error);
+      setError(result.message || result.error);
     }
     setLoading(false);
   };
+
+  if (requiresRoleSelection) {
+    return (
+      <div className="auth-page">
+        <div className="auth-container">
+          <div className="auth-form-container" style={{ width: '100%', maxWidth: '500px', margin: '0 auto' }}>
+            <div className="auth-form-wrapper">
+              <div className="form-header">
+                <h2>Select Role</h2>
+                <p>Please select which role you want to login with</p>
+              </div>
+              
+              <div className="role-selector" style={{ flexDirection: 'column', gap: '1rem' }}>
+                {availableRoles.map((role) => (
+                  <button
+                    key={role}
+                    type="button"
+                    className="role-btn"
+                    onClick={() => handleRoleSelection(role)}
+                    style={{ width: '100%', padding: '1rem', justifyContent: 'center' }}
+                  >
+                    {role.replace('_', ' ')}
+                  </button>
+                ))}
+              </div>
+              
+              <button 
+                className="btn btn-outline" 
+                onClick={() => setRequiresRoleSelection(false)}
+                style={{ marginTop: '1rem', width: '100%' }}
+              >
+                Back to Login
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="auth-page">
@@ -118,34 +176,21 @@ const LoginPage = () => {
               </div>
             )}
 
-            <div className="role-selector">
-              {ROLES.map((r) => (
-                <button
-                  key={r.id}
-                  type="button"
-                  className={`role-btn ${role === r.id ? 'active' : ''}`}
-                  onClick={() => setRole(r.id)}
-                >
-                  {r.label}
-                </button>
-              ))}
-            </div>
-
             <form onSubmit={handleSubmit} className="auth-form">
               <div className="form-group">
                 <label htmlFor="email" className="form-label">
-                  {role === 'staff' ? 'Employee ID' : 'Email Address'}
+                  Email Address
                 </label>
                 <div className="input-with-icon">
                   <svg className="input-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
                   </svg>
                   <input
-                    type={role === 'staff' ? 'text' : 'email'}
+                    type="email"
                     id="email"
                     name="email"
                     className="form-input"
-                    placeholder={role === 'staff' ? 'Enter Employee ID' : 'you@example.com'}
+                    placeholder="you@example.com"
                     value={formData.email}
                     onChange={handleChange}
                     required
