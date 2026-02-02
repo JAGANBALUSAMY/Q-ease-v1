@@ -1,3 +1,4 @@
+
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
@@ -5,44 +6,119 @@ const prisma = new PrismaClient();
 const resolveScope = (req) => {
   const paramOrgId = req.params.organisationId;
   const userOrgId = req.user.organisationId;
-  const isSuperAdmin = req.user.role === 'SUPER_ADMIN';
+  const userId = req.user.id;
+  // Standardize the role comparison
+  const role = req.user.role ? req.user.role.toUpperCase() : '';
+  const isSuperAdmin = role === 'SUPER_ADMIN';
+  const isOrgAdmin = role === 'ORGANISATION_ADMIN';
 
-  // 1. Explicit Organisation ID in URL (Pre-authorized by middleware)
+  // 1. Super Admin without specific Org override (Global View)
+  if (isSuperAdmin && !paramOrgId) {
+    return { organisationId: null, isGlobal: true, adminId: null, isOrgAdmin: false };
+  }
+
+  // 2. Explicit Organisation ID in URL
   if (paramOrgId) {
-    return { organisationId: paramOrgId, isGlobal: false };
+    return { organisationId: paramOrgId, isGlobal: false, adminId: null, isOrgAdmin: false };
   }
 
-  // 2. User's Organisation ID (Standard Org Admin/Staff)
+  // 3. User's Organisation ID (Standard Org Admin/Staff)
   if (userOrgId) {
-    return { organisationId: userOrgId, isGlobal: false };
+    return {
+      organisationId: userOrgId,
+      isGlobal: false,
+      adminId: isOrgAdmin ? userId : null,
+      isOrgAdmin
+    };
   }
 
-  // 3. Super Admin without specific Org (Global View)
-  if (isSuperAdmin) {
-    return { organisationId: null, isGlobal: true };
-  }
-
-  // 4. Fallback (Should typically be caught by middleware)
-  return { organisationId: null, isGlobal: false, error: true };
+  // 4. Fallback
+  return {
+    organisationId: null,
+    isGlobal: isSuperAdmin,
+    adminId: null,
+    isOrgAdmin: false,
+    error: !isSuperAdmin && !userOrgId
+  };
 };
 
 const getAdminStats = async (req, res) => {
   try {
-    const { organisationId, isGlobal, error } = resolveScope(req);
-    if (error) return res.json({ success: true, data: { totalUsers: 0, totalQueues: 0, activeTokens: 0 } });
+    const { organisationId, isGlobal, adminId, error } = resolveScope(req);
+    if (error) return res.json({ success: true, data: { totalUsers: 0, totalQueues: 0, activeTokens: 0, staffCount: 0, customerCount: 0, adminCount: 0 } });
 
     const userWhere = isGlobal ? {} : { organisationId };
-    const queueWhere = isGlobal ? {} : { organisationId };
+    const queueWhere = {
+      ...(isGlobal ? {} : { organisationId }),
+      ...(adminId ? { adminId } : {})
+    };
     const tokenWhere = {
       status: { in: ['PENDING', 'CALLED'] },
-      ...(isGlobal ? {} : { queue: { organisationId } })
+      queue: queueWhere
     };
 
-    const [usersCount, queuesCount, activeTokens] = await Promise.all([
+    // Get user counts by role
+    const [
+      usersCount,
+      queuesCount,
+      activeTokens,
+      staffCount,
+      customerCount,
+      adminCount,
+      completedTokensToday
+    ] = await Promise.all([
       prisma.user.count({ where: userWhere }),
       prisma.queue.count({ where: queueWhere }),
-      prisma.token.count({ where: tokenWhere })
+      prisma.token.count({ where: tokenWhere }),
+      // Count staff users
+      prisma.user.count({
+        where: {
+          ...userWhere,
+          roleModel: { name: 'STAFF' }
+        }
+      }),
+      // Count customer/user users
+      prisma.user.count({
+        where: {
+          ...userWhere,
+          roleModel: { name: 'USER' }
+        }
+      }),
+      // Count admin users (ADMIN + ORGANISATION_ADMIN)
+      prisma.user.count({
+        where: {
+          ...userWhere,
+          roleModel: { name: { in: ['ADMIN', 'ORGANISATION_ADMIN'] } }
+        }
+      }),
+      // Get completed tokens from today for average wait time calculation
+      prisma.token.findMany({
+        where: {
+          status: 'SERVED',
+          servedAt: {
+            gte: new Date(new Date().setHours(0, 0, 0, 0)) // Start of today
+          },
+          queue: queueWhere
+        },
+        select: {
+          createdAt: true,
+          calledAt: true
+        }
+      })
     ]);
+
+    // Calculate average wait time from completed tokens
+    let avgWaitTime = 0;
+    if (completedTokensToday.length > 0) {
+      const totalWaitTime = completedTokensToday.reduce((sum, token) => {
+        if (token.calledAt && token.createdAt) {
+          const waitMinutes = Math.floor((new Date(token.calledAt) - new Date(token.createdAt)) / (1000 * 60));
+          return sum + waitMinutes;
+        }
+        return sum;
+      }, 0);
+      avgWaitTime = Math.round(totalWaitTime / completedTokensToday.length);
+    }
 
     res.json({
       success: true,
@@ -50,28 +126,31 @@ const getAdminStats = async (req, res) => {
         totalUsers: usersCount,
         totalQueues: queuesCount,
         activeTokens,
-        todayServed: 0,
-        avgWaitTime: 5
+        staffCount,
+        customerCount,
+        adminCount,
+        todayServed: completedTokensToday.length,
+        avgWaitTime
       }
     });
   } catch (error) {
-    console.error('Admin s error:', error);
+    console.error('Admin            fasdf error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch admin stats' });
   }
 };
 
 const getRecentActivity = async (req, res) => {
   try {
-    console.log('getRecentActivity called. User:', req.user);
-    const { organisationId, isGlobal, error } = resolveScope(req);
-    console.log('Scope resolved:', { organisationId, isGlobal, error });
+    const { organisationId, isGlobal, adminId, error } = resolveScope(req);
 
     if (error) return res.json({ success: true, data: { activities: [] } });
 
-    const whereClause = isGlobal ? {} : { queue: { organisationId } };
-    console.log('Where clause:', JSON.stringify(whereClause));
+    const queueWhere = {
+      ...(isGlobal ? {} : { organisationId }),
+      ...(adminId ? { adminId } : {})
+    };
 
-    const queueWhere = isGlobal ? {} : { organisationId };
+    const whereClause = { queue: queueWhere };
 
     const [recentTokens, recentQueues] = await Promise.all([
       prisma.token.findMany({

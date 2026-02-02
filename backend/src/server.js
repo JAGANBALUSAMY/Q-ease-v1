@@ -43,10 +43,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Request logging middleware
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
-  next();
-});
+const requestLogger = require('./middleware/requestLogger');
+app.use(requestLogger);
+
 
 // Make io accessible to routes
 app.set('io', io);
@@ -115,12 +114,14 @@ const organisationRoutes = require('./routes/organisationRoutes');
 const queueRoutes = require('./routes/queueRoutes');
 const tokenRoutes = require('./routes/tokenRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
-const { authenticateToken } = require('./middleware/authMiddleware');
+const { authenticateToken, authorizeRoles } = require('./middleware/authMiddleware');
 const systemAuth = require('./middleware/systemAuthMiddleware');
 const { createTenant } = require('./controllers/systemAdminController');
 const { createAdmin, getMyAdmins } = require('./controllers/superUserController');
 const usersRoutes = require('./routes/users');
 const qrCodeRoutes = require('./routes/qrCodeRoutes');
+const userManagementRoutes = require('./routes/userManagementRoutes');
+const systemRoutes = require('./routes/systemRoutes');
 
 // Use routes
 app.use('/api/auth', authRoutes);
@@ -130,13 +131,15 @@ app.use('/api/tokens', tokenRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/qr', qrCodeRoutes);
+app.use('/api/user-management', userManagementRoutes);
+app.use('/api/system', systemRoutes);
 
 // System routes
 app.post('/api/system/create-tenant', systemAuth, createTenant);
 
 // Super Admin routes
-app.post('/api/super/admins', authenticateToken, createAdmin);
-app.get('/api/super/admins', authenticateToken, getMyAdmins);
+app.post('/api/super/admins', authenticateToken, authorizeRoles(['SUPER_ADMIN']), createAdmin);
+app.get('/api/super/admins', authenticateToken, authorizeRoles(['SUPER_ADMIN']), getMyAdmins);
 
 // 404 handler
 app.use((req, res) => {

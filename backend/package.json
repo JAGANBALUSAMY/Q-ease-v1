@@ -11,6 +11,9 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:reset": "prisma migrate reset --force",
+    "db:backup": "node scripts/backup-db.js",
+    "db:restore": "node scripts/restore-db.js",
+    "db:check-duplicates": "node scripts/check-duplicates.js",
     "test": "jest",
     "test:watch": "jest --watch"
   },

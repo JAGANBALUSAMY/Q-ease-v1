@@ -25,9 +25,11 @@ import StaffCallNextPage from './features/staff/pages/StaffCallNextPage';
 // Admin Pages
 import AdminDashboardPage from './features/admin/pages/AdminDashboardPage';
 import AdminUserManagementPage from './features/admin/pages/AdminUserManagementPage';
+import AdminCustomerManagementPage from './features/admin/pages/AdminCustomerManagementPage';
 import AdminAnalyticsPage from './features/admin/pages/AdminAnalyticsPage';
 import AdminQueueManagementPage from './features/admin/pages/AdminQueueManagementPage';
 import AdminSettingsPage from './features/admin/pages/AdminSettingsPage';
+import SystemDashboardPage from './features/admin/pages/SystemDashboard';
 
 // Other Pages (need to categorize)
 import QRScanPage from './features/customer/pages/QRScanPage';
@@ -85,10 +87,10 @@ function App() {
               }
             />
             <Route
-              path="/scan"
+              path="/customer/queue/:queueId"
               element={
-                <PrivateRoute>
-                  <QRScanPage />
+                <PrivateRoute roles={['CUSTOMER']}>
+                  <CustomerQueuePage />
                 </PrivateRoute>
               }
             />
@@ -122,6 +124,14 @@ function App() {
                 </PrivateRoute>
               }
             />
+            <Route
+              path="/admin/system"
+              element={
+                <PrivateRoute roles={['ORGANISATION_ADMIN', 'SUPER_ADMIN']}>
+                  <SystemDashboardPage />
+                </PrivateRoute>
+              }
+            />
             <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
 
             {/* Super Admin Routes */}
@@ -148,6 +158,14 @@ function App() {
               element={
                 <PrivateRoute roles={['ORGANISATION_ADMIN', 'SUPER_ADMIN']}>
                   <AdminUserManagementPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/admin/customers"
+              element={
+                <PrivateRoute roles={['ORGANISATION_ADMIN', 'SUPER_ADMIN']}>
+                  <AdminCustomerManagementPage />
                 </PrivateRoute>
               }
             />

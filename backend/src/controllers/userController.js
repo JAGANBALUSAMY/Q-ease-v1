@@ -10,56 +10,33 @@ const { getUserNotifications, markNotificationAsRead } = require('../services/no
 
 // Get user profile
 const getUserProfile = async (req, res) => {
-    try {
-        const userId = req.user.id;
+  try {
+    const user = await prisma.user.findFirst({
+      where: { id: req.user.id }
+    });
 
-        const user = await prisma.user.findUnique({
-            where: { id: userId },
-            select: {
-                id: true,
-                email: true,
-                firstName: true,
-                lastName: true,
-                phoneNumber: true,
-                role: true,
-                organisationId: true,
-                isVerified: true,
-                isActive: true,
-                createdAt: true,
-                roleModel: {
-                    select: {
-                        name: true,
-                        description: true
-                    }
-                },
-                organisation: {
-                    select: {
-                        id: true,
-                        name: true,
-                        code: true
-                    }
-                }
-            }
-        });
-
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: 'User not found'
-            });
-        }
-
-        res.json({
-            success: true,
-            data: { user }
-        });
-    } catch (error) {
-        console.error('Get user profile error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to get user profile'
-        });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
     }
+
+    res.json({
+      success: true,
+      data: {
+        user: {
+          firstName: user.firstName || '',
+          lastName: user.lastName || '',
+          email: user.email || '',
+          phone: user.phoneNumber || ''
+        }
+      }
+    });
+  } catch (err) {
+    console.error('PROFILE ERROR:', err);
+    res.status(500).json({ message: 'Profile failed' });
+  }
 };
 
 // Update user profile
@@ -271,62 +248,74 @@ async function createUser(req, res) {
 
         // Check if user already exists
         const existingUser = await prisma.user.findUnique({
-            where: { email }
+            where: { email },
+            include: { userRoles: true }
         });
 
-        if (existingUser) {
-            console.log('User already exists:', email);
-            return res.status(409).json({
-                success: false,
-                message: 'User with this email already exists'
-            });
-        }
-
-        // Determine Role ID and Name
-        // MAPPING: Frontend sends 'ADMIN' -> Backend needs 'ORGANISATION_ADMIN' or keep 'ADMIN' if valid?
-        // Checking seed.js: 'ORGANISATION_ADMIN', 'STAFF', 'USER', 'SUPER_ADMIN'
-        // If frontend sends 'ADMIN', we map to 'ORGANISATION_ADMIN'.
-        // If frontend sends 'STAFF', we map to 'STAFF'.
-
-        // Determine Role ID and Name
-        let roleName = role.toUpperCase(); // Force uppercase to match seed data 'STAFF', 'USER'
-        if (roleName === 'ADMIN') roleName = 'ORGANISATION_ADMIN';
-
-        console.log('Looking up role:', roleName);
+        const roleName = role.toUpperCase() === 'ADMIN' ? 'ORGANISATION_ADMIN' : role.toUpperCase();
+        
+        // Find the role record
         const roleRecord = await prisma.roleModel.findFirst({
-            where: {
-                name: {
-                    equals: roleName,
-                    mode: 'insensitive' // Case insensitive fallback
-                }
-            }
+            where: { name: roleName }
         });
 
         if (!roleRecord) {
-            console.log('Role not found:', roleName);
-            // Fallback: Try finding case-insensitive or list all roles to debug
-            const allRoles = await prisma.roleModel.findMany();
-            console.log('Available roles:', allRoles.map(r => r.name));
-
             return res.status(400).json({
                 success: false,
                 message: 'Invalid role specified'
             });
         }
-        console.log('Role found:', roleRecord.id);
 
-        // Determine Organisation ID
-        // If super admin creates, they SHOULD specify orgId, or if creating another super admin? 
-        // Typically Super Admin creates Org Admins.
-        // For now, assuming current scope is: Org Admin creating Staff.
-        // If Super Admin is creating a user, we might need logic for them to select Org.
-        // But the simplified requirement is managing staff.
+        // Handle existing user
+        if (existingUser) {
+            console.log(`User exists. Checking if role '${roleName}' can be added.`);
 
-        // If creator is NOT super admin, new user MUST belong to same org
+            // Check if user already has this role
+            const hasRole = existingUser.userRoles.some(ur => ur.roleId === roleRecord.id);
+            if (hasRole) {
+                return res.status(409).json({
+                    success: false,
+                    message: 'User already has this role'
+                });
+            }
+
+            // Check organization consistency
+            if (existingUser.organisationId && existingUser.organisationId !== creatorOrgId && !isCreatorSuperAdmin) {
+                 return res.status(409).json({
+                    success: false,
+                    message: 'User belongs to another organization. Cannot add them.'
+                });
+            }
+
+            // Add role to existing user
+            await prisma.userRole.create({
+                data: {
+                    userId: existingUser.id,
+                    roleId: roleRecord.id
+                }
+            });
+
+            // If user had no organization, assign them to this one
+            if (!existingUser.organisationId && creatorOrgId) {
+                await prisma.user.update({
+                    where: { id: existingUser.id },
+                    data: { organisationId: creatorOrgId }
+                });
+            }
+
+            return res.status(200).json({
+                success: true,
+                message: 'Role added to existing user successfully',
+                data: { user: existingUser }
+            });
+        }
+        
+        // --- Create New User ---
+
+        // Determine Organisation ID (same logic as before)
         let targetOrgId = creatorOrgId;
         if (!targetOrgId && !isCreatorSuperAdmin) {
-            console.log('Error: No Organisation ID for non-super-admin creator');
-            // This might be the issue if the creator doesn't have orgId in token
+             // Logic kept from original
         }
 
         console.log('Creating user with Org ID:', targetOrgId);
@@ -344,16 +333,21 @@ async function createUser(req, res) {
                 organisationId: targetOrgId,
                 isVerified: true,
                 isActive: true,
-                creatorId: req.user.id
+                creatorId: req.user.id,
+                // CRITICAL: Create the UserRole entry for new users too
+                userRoles: {
+                    create: {
+                        roleId: roleRecord.id
+                    }
+                }
             },
             select: {
                 id: true,
                 email: true,
-                // role: true, // REMOVED
                 firstName: true,
                 lastName: true,
                 isActive: true,
-                roleModel: { // Added to return role name
+                roleModel: {
                     select: {
                         name: true
                     }

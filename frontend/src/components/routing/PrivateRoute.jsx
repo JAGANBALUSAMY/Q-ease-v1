@@ -2,6 +2,21 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
+const getDefaultDashboard = (role) => {
+  switch (role) {
+    case 'SUPER_ADMIN':
+      return '/admin/dashboard';
+    case 'ORGANISATION_ADMIN':
+      return '/admin/dashboard';
+    case 'STAFF':
+      return '/staff/dashboard';
+    case 'CUSTOMER':
+      return '/browse';
+    default:
+      return '/';
+  }
+};
+
 const PrivateRoute = ({ children, roles = [] }) => {
   const { user, loading } = useAuth();
 
@@ -25,7 +40,8 @@ const PrivateRoute = ({ children, roles = [] }) => {
 
   // Check role-based access
   if (roles.length > 0 && !roles.includes(user.role)) {
-    return <Navigate to="/" replace />;
+    const defaultDashboard = getDefaultDashboard(user.role);
+    return <Navigate to={defaultDashboard} replace />;
   }
 
   return children;

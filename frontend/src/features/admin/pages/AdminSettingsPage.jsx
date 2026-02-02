@@ -48,7 +48,18 @@ const AdminSettingsPage = () => {
       setError('');
       
       const response = await api.get('/organisations/my');
-      setOrganisation(response.data.data.organisation);
+      if (response.data.data.organisation) {
+        setOrganisation(prev => ({
+          ...prev,
+          ...response.data.data.organisation
+        }));
+      } else if (response.data.data.organisations && response.data.data.organisations.length > 0) {
+        // For super admin, use first organisation
+        setOrganisation(prev => ({
+          ...prev,
+          ...response.data.data.organisations[0]
+        }));
+      }
     } catch (err) {
       setError('Failed to load organisation settings');
       console.error('Error loading settings:', err);
@@ -252,183 +263,7 @@ const AdminSettingsPage = () => {
           </div>
         </div>
 
-        {/* Operating Hours Section */}
-        <div className="form-section">
-          <h3>Operating Hours</h3>
-          
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="operatingHours.start">Opening Time</label>
-              <input
-                type="time"
-                id="operatingHours.start"
-                value={organisation.operatingHours.start}
-                onChange={(e) => handleInputChange('operatingHours.start', e.target.value)}
-                disabled={saving}
-              />
-            </div>
 
-            <div className="form-group">
-              <label htmlFor="operatingHours.end">Closing Time</label>
-              <input
-                type="time"
-                id="operatingHours.end"
-                value={organisation.operatingHours.end}
-                onChange={(e) => handleInputChange('operatingHours.end', e.target.value)}
-                disabled={saving}
-              />
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label>Operating Days</label>
-            <div className="checkbox-grid">
-              {Object.entries(dayNames).map(([key, value]) => (
-                <label key={key} className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={organisation.operatingHours.days.includes(key)}
-                    onChange={() => handleInputChange(`operatingHours.days.${key}`, null)}
-                    disabled={saving}
-                  />
-                  {value}
-                </label>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Notification Settings */}
-        <div className="form-section">
-          <h3>Notification Settings</h3>
-          
-          <div className="checkbox-group">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={organisation.notificationSettings.emailNotifications}
-                onChange={(e) => handleInputChange('notificationSettings.emailNotifications', e.target.checked)}
-                disabled={saving}
-              />
-              Enable Email Notifications
-            </label>
-            
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={organisation.notificationSettings.smsNotifications}
-                onChange={(e) => handleInputChange('notificationSettings.smsNotifications', e.target.checked)}
-                disabled={saving}
-              />
-              Enable SMS Notifications
-            </label>
-            
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={organisation.notificationSettings.pushNotifications}
-                onChange={(e) => handleInputChange('notificationSettings.pushNotifications', e.target.checked)}
-                disabled={saving}
-              />
-              Enable Push Notifications
-            </label>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="notificationSettings.tokenReminderMinutes">Token Reminder (minutes before)</label>
-            <input
-              type="number"
-              id="notificationSettings.tokenReminderMinutes"
-              value={organisation.notificationSettings.tokenReminderMinutes}
-              onChange={(e) => handleInputChange('notificationSettings.tokenReminderMinutes', parseInt(e.target.value))}
-              min="1"
-              max="60"
-              disabled={saving}
-            />
-          </div>
-        </div>
-
-        {/* Security Settings */}
-        <div className="form-section">
-          <h3>Security Settings</h3>
-          
-          <div className="checkbox-group">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={organisation.securitySettings.requireTwoFactor}
-                onChange={(e) => handleInputChange('securitySettings.requireTwoFactor', e.target.checked)}
-                disabled={saving}
-              />
-              Require Two-Factor Authentication
-            </label>
-          </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="securitySettings.sessionTimeout">Session Timeout (minutes)</label>
-              <input
-                type="number"
-                id="securitySettings.sessionTimeout"
-                value={organisation.securitySettings.sessionTimeout}
-                onChange={(e) => handleInputChange('securitySettings.sessionTimeout', parseInt(e.target.value))}
-                min="1"
-                max="480"
-                disabled={saving}
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="securitySettings.passwordMinLength">Minimum Password Length</label>
-              <input
-                type="number"
-                id="securitySettings.passwordMinLength"
-                value={organisation.securitySettings.passwordMinLength}
-                onChange={(e) => handleInputChange('securitySettings.passwordMinLength', parseInt(e.target.value))}
-                min="6"
-                max="20"
-                disabled={saving}
-              />
-            </div>
-          </div>
-
-          <div className="checkbox-group">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={organisation.securitySettings.passwordRequireSpecialChar}
-                onChange={(e) => handleInputChange('securitySettings.passwordRequireSpecialChar', e.target.checked)}
-                disabled={saving}
-              />
-              Require Special Characters in Passwords
-            </label>
-          </div>
-        </div>
-
-        {/* Backup & Export */}
-        <div className="form-section">
-          <h3>Backup & Export</h3>
-          
-          <div className="backup-actions">
-            <button 
-              type="button" 
-              onClick={handleBackup}
-              className="backup-button"
-              disabled={saving}
-            >
-              Create Backup
-            </button>
-            
-            <button 
-              type="button" 
-              onClick={handleExportData}
-              className="export-button"
-              disabled={saving}
-            >
-              Export Data
-            </button>
-          </div>
-        </div>
 
         <div className="form-actions">
           <button 

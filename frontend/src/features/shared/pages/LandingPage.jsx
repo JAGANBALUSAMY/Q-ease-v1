@@ -5,15 +5,33 @@ import api from '../../../services/api';
 import '../styles/LandingPage.css';
 
 const LandingPage = () => {
-    const { user } = useAuth();
+    const { user, loading } = useAuth();
     const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState('');
     const [publicQueues, setPublicQueues] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loadingQueues, setLoadingQueues] = useState(true);
 
+    // Redirect if user is logged in
     useEffect(() => {
+        if (loading) return;
+
+        // If user is logged in, redirect to their dashboard
+        if (user) {
+            if (user.role === 'SUPER_ADMIN' || user.role === 'ORGANISATION_ADMIN') {
+                navigate('/admin/dashboard', { replace: true });
+            } else if (user.role === 'STAFF') {
+                navigate('/staff/dashboard', { replace: true });
+            } else if (user.role === 'CUSTOMER') {
+                navigate('/browse', { replace: true });
+            }
+        }
+    }, [user, loading, navigate]);
+
+    // Fetch public queues only when not logged in
+    useEffect(() => {
+        if (loading || user) return;
         fetchPublicQueues();
-    }, []);
+    }, [loading, user]);
 
     const fetchPublicQueues = async () => {
         try {
@@ -24,7 +42,7 @@ const LandingPage = () => {
         } catch (error) {
             console.error('Failed to fetch public queues:', error);
         } finally {
-            setLoading(false);
+            setLoadingQueues(false);
         }
     };
 
@@ -42,6 +60,21 @@ const LandingPage = () => {
             navigate('/login', { state: { from: `/queue/${queueId}` } });
         }
     };
+
+    // While loading auth or redirecting, show loading screen
+    if (loading || user) {
+        return (
+            <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: '100vh',
+                background: 'var(--gray-50)'
+            }}>
+                <div className="spinner spinner-primary"></div>
+            </div>
+        );
+    }
 
     const features = [
         {
@@ -73,12 +106,6 @@ const LandingPage = () => {
         }
     ];
 
-    const stats = [
-        { value: '10K+', label: 'Active Users' },
-        { value: '500+', label: 'Organizations' },
-        { value: '50K+', label: 'Tokens Issued' },
-        { value: '98%', label: 'Satisfaction' }
-    ];
 
     return (
         <div className="landing-page">
@@ -92,10 +119,7 @@ const LandingPage = () => {
 
                 <div className="container">
                     <div className="hero-content">
-                        <div className="hero-badge">
-                            <span className="badge-dot"></span>
-                            Now serving 10,000+ users daily
-                        </div>
+
 
                         <h1 className="hero-title">
                             Skip the Wait,
@@ -216,19 +240,7 @@ const LandingPage = () => {
                 </div>
             </section>
 
-            {/* Stats Section */}
-            <section className="stats-section">
-                <div className="container">
-                    <div className="stats-grid">
-                        {stats.map((stat, index) => (
-                            <div key={index} className="stat-card">
-                                <div className="stat-value">{stat.value}</div>
-                                <div className="stat-label">{stat.label}</div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
+
 
             {/* Features Section */}
             <section className="features-section">

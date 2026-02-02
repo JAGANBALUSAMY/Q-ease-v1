@@ -16,48 +16,47 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is already logged in
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
+  const token = localStorage.getItem('token');
 
-    if (token && userData) {
-      try {
-        setUser(JSON.parse(userData));
-      } catch (err) {
-        // Invalid user data, clear storage
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-      }
-    }
+  if (!token) {
     setLoading(false);
-  }, []);
+    return;
+  }
 
-  const login = async (identifier, password, roleType = 'customer') => {
+  api.get('/users/profile')
+    .then(res => {
+      const user = res.data.data.user;
+      setUser(user);
+      localStorage.setItem('user', JSON.stringify(user));
+    })
+    .catch(() => {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setUser(null);
+    })
+    .finally(() => setLoading(false));
+}, []);
+
+
+  const login = async (email, password) => {
     try {
-      // Determine login endpoint and data structure based on role
-      let endpoint, loginData;
+      // Always use the unified login endpoint
+      const response = await api.post('/auth/login', { email, password });
+      
+      const { data } = response.data;
 
-      switch (roleType) {
-        case 'staff':
-          endpoint = '/auth/staff-login';
-          loginData = { employeeId: identifier, password };
-          break;
-        case 'admin':
-          endpoint = '/auth/admin-login';
-          loginData = { email: identifier, password };
-          break;
-        case 'super_admin':
-          endpoint = '/auth/super-admin-login';
-          loginData = { email: identifier, password };
-          break;
-        default: // customer
-          endpoint = '/auth/login';
-          loginData = { email: identifier, password };
+      // Check if role selection is required
+      if (data.requiresRoleSelection) {
+        return { 
+          success: true, 
+          requiresRoleSelection: true,
+          availableRoles: data.availableRoles,
+          userId: data.userId
+        };
       }
 
-      const response = await api.post(endpoint, loginData);
-
-      const { token, user: userData } = response.data.data;
+      // Standard login (single role)
+      const { token, user: userData } = data;
 
       // Store in localStorage
       localStorage.setItem('token', token);
@@ -72,6 +71,28 @@ export const AuthProvider = ({ children }) => {
       return { success: true, user: userData };
     } catch (error) {
       const message = error.response?.data?.message || 'Login failed';
+      return { success: false, message: message }; // Fixed structure to match LoginPage check
+    }
+  };
+
+  const selectRole = async (userId, selectedRole) => {
+    try {
+      const response = await api.post('/auth/select-role', { userId, selectedRole });
+      const { token, user: userData } = response.data.data;
+
+      // Store in localStorage
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(userData));
+
+      // Set user state
+      setUser(userData);
+
+      // Set default authorization header
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+      return { success: true, user: userData };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Role selection failed';
       return { success: false, message };
     }
   };
@@ -98,6 +119,50 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const loginWithGoogle = async () => {
+    try {
+      // Import Firebase auth dynamically
+      const { signInWithGoogle } = await import('../config/firebase');
+
+      // Sign in with Google
+      const result = await signInWithGoogle();
+
+      if (!result.success) {
+        return { success: false, error: result.error };
+      }
+
+      // Send Google ID token to backend for verification
+      const response = await api.post('/auth/google-login', {
+        idToken: result.idToken,
+        email: result.user.email,
+        displayName: result.user.displayName,
+        photoURL: result.user.photoURL
+      });
+
+      const { token, user: userData } = response.data.data;
+
+      // Store in localStorage
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(userData));
+
+      // Set user state
+      setUser(userData);
+
+      // Set default authorization header
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+      return { success: true, user: userData };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Google login failed';
+      return { success: false, error: message };
+    }
+  };
+
+  const updateUser = (userData) => {
+    setUser(userData);
+    localStorage.setItem('user', JSON.stringify(userData));
+  };
+
   const logout = () => {
     // Clear localStorage
     localStorage.removeItem('token');
@@ -110,14 +175,10 @@ export const AuthProvider = ({ children }) => {
     delete api.defaults.headers.common['Authorization'];
   };
 
-  const updateUser = (userData) => {
-    setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
-  };
-
   const value = {
     user,
     login,
+    loginWithGoogle,
     register,
     logout,
     updateUser,

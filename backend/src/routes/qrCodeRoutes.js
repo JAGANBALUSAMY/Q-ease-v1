@@ -7,8 +7,8 @@ const {
     generateTokenQR
 } = require('../services/qrCodeService');
 
-// Generate QR code for organisation
-router.get('/organisation/:id', async (req, res) => {
+// Generate QR code for organisation (Admin only)
+router.get('/organisation/:id', authenticateToken, authorizeRoles(['ORGANISATION_ADMIN', 'SUPER_ADMIN']), async (req, res) => {
     try {
         const { id } = req.params;
         const result = await generateOrganisationQR(id);
@@ -25,8 +25,8 @@ router.get('/organisation/:id', async (req, res) => {
     }
 });
 
-// Generate QR code for queue
-router.get('/queue/:id', async (req, res) => {
+// Generate QR code for queue (Admin/Staff only)
+router.get('/queue/:id', authenticateToken, authorizeRoles(['STAFF', 'ORGANISATION_ADMIN', 'SUPER_ADMIN']), async (req, res) => {
     try {
         const { id } = req.params;
         const result = await generateQueueQR(id);

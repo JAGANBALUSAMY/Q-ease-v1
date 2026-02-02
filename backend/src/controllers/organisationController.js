@@ -15,8 +15,18 @@ const getMyOrganisation = async (req, res) => {
       }
     });
 
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Check if user has a role and if it's SUPER_ADMIN
+    const isSuperAdmin = user.roleModel && user.roleModel.name === 'SUPER_ADMIN';
+
     // If user is super admin, return all organisations
-    if (user.roleModel.name === 'SUPER_ADMIN') {
+    if (isSuperAdmin) {
       const organisations = await prisma.organisation.findMany({
         where: {
           isActive: true
@@ -48,7 +58,7 @@ const getMyOrganisation = async (req, res) => {
       });
     }
 
-    if (!user || !user.organisation) {
+    if (!user.organisation) {
       return res.status(404).json({
         success: false,
         message: 'Organisation not found for this user'
