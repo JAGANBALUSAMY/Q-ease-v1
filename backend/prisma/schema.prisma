@@ -13,7 +13,7 @@ model User {
   password       String?
   firstName      String
   lastName       String
-  phoneNumber    String?
+  phoneNumber    String?        @unique
   organisationId String?
   roleId         String
   isVerified     Boolean        @default(false)
@@ -24,10 +24,16 @@ model User {
   notifications  Notification[]
   calledTokens   Token[]        @relation("TokenCaller")
   userTokens     Token[]        @relation("UserTokens")
+  auditLogs      UserAuditLog[] @relation("UserAuditLogs")
   creator        User?          @relation("UserLineage", fields: [creatorId], references: [id])
   createdUsers   User[]         @relation("UserLineage")
   organisation   Organisation?  @relation(fields: [organisationId], references: [id])
   roleModel      RoleModel      @relation(fields: [roleId], references: [id])
+
+  @@index([email])
+  @@index([organisationId])
+  @@index([roleId])
+  @@index([creatorId])
 }
 
 model RoleModel {
@@ -78,6 +84,11 @@ model Queue {
   analytics      Analytics[]
   organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
   tokens         Token[]
+
+  @@unique([organisationId, name])
+  @@index([organisationId])
+  @@index([isActive])
+  @@index([createdAt])
 }
 
 model Token {
@@ -102,6 +113,13 @@ model Token {
   organisation   Organisation  @relation(fields: [organisationId], references: [id], onDelete: Cascade)
   queue          Queue         @relation(fields: [queueId], references: [id], onDelete: Cascade)
   tokenUser      User?         @relation("UserTokens", fields: [userId], references: [id])
+
+  @@unique([queueId, tokenId])
+  @@index([queueId])
+  @@index([userId])
+  @@index([status])
+  @@index([issuedAt])
+  @@index([organisationId])
 }
 
 model Notification {
@@ -167,4 +185,20 @@ enum MetricType {
   CUSTOMER_SATISFACTION
   STAFF_EFFICIENCY
   PEAK_HOURS
+}
+
+model UserAuditLog {
+  id            String   @id @default(cuid())
+  userId        String
+  action        String
+  targetUserId  String?
+  metadata      Json?
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime @default(now())
+  user          User     @relation("UserAuditLogs", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([targetUserId])
+  @@index([createdAt])
 }

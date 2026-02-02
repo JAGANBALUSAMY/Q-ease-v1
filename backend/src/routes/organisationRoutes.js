@@ -15,14 +15,14 @@ router.post('/', authenticateToken, authorizeRoles('SUPER_ADMIN'), createOrganis
 // Verify organisation (Super Admin only)
 router.put('/:id/verify', authenticateToken, authorizeRoles('SUPER_ADMIN'), verifyOrganisation);
 
-// Get organisation by code
-router.get('/code/:code', getOrganisationByCode);
+// Get organisation by code (authenticated - customers need this to join queues)
+router.get('/code/:code', authenticateToken, getOrganisationByCode);
 
-// Search organisations
-router.get('/search', searchOrganisations);
-router.get('/', searchOrganisations);
+// Search organisations (authenticated - customers need this to find organisations)
+router.get('/search', authenticateToken, searchOrganisations);
+router.get('/', authenticateToken, searchOrganisations);
 
-// Get organisation by ID or Code
-router.get('/:id', getOrganisationById);
+// Get organisation by ID or Code (authenticated)
+router.get('/:id', authenticateToken, getOrganisationById);
 
 module.exports = router;

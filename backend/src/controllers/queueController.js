@@ -27,13 +27,15 @@ const getAllQueues = async (req, res) => {
             code: true
           }
         },
-        _count: {
+        tokens: {
+          where: {
+            status: { in: ['PENDING', 'CALLED'] }
+          },
           select: {
-            tokens: {
-              where: {
-                status: { in: ['PENDING', 'CALLED'] }
-              }
-            }
+            id: true,
+            status: true,
+            tokenId: true,
+            updatedAt: true
           }
         }
       },
@@ -42,17 +44,31 @@ const getAllQueues = async (req, res) => {
       }
     });
 
-    const formattedQueues = queues.map(queue => ({
-      id: queue.id,
-      name: queue.name,
-      description: queue.description,
-      maxTokens: queue.maxTokens,
-      averageTime: queue.averageTime,
-      isActive: queue.isActive,
-      organisation: queue.organisation,
-      waitingCount: queue._count.tokens,
-      createdAt: queue.createdAt
-    }));
+    // Format queues with current token and counts
+    const formattedQueues = queues.map((queue) => {
+      // Safely access tokens array
+      const tokens = queue.tokens || [];
+      // Find the current CALLED token
+      const currentToken = tokens.find(t => t.status === 'CALLED');
+      // Count PENDING tokens (waiting)
+      const waitingCount = tokens.filter(t => t.status === 'PENDING').length;
+
+      return {
+        id: queue.id,
+        name: queue.name,
+        description: queue.description,
+        maxTokens: queue.maxTokens,
+        averageTime: queue.averageTime,
+        isActive: queue.isActive,
+        organisation: queue.organisation,
+        currentToken: currentToken?.tokenId || null,
+        _count: {
+          tokens: waitingCount
+        },
+        waitingCount: waitingCount,
+        createdAt: queue.createdAt
+      };
+    });
 
     res.json({
       success: true,
@@ -60,9 +76,12 @@ const getAllQueues = async (req, res) => {
     });
   } catch (error) {
     console.error('Get all queues error:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Error message:', error.message);
     res.status(500).json({
       success: false,
-      message: 'Failed to retrieve queues'
+      message: 'Failed to retrieve queues',
+      error: error.message
     });
   }
 };
