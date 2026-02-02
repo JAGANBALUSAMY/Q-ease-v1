@@ -73,12 +73,6 @@ const LandingPage = () => {
         }
     ];
 
-    const stats = [
-        { value: '10K+', label: 'Active Users' },
-        { value: '500+', label: 'Organizations' },
-        { value: '50K+', label: 'Tokens Issued' },
-        { value: '98%', label: 'Satisfaction' }
-    ];
 
     return (
         <div className="landing-page">
@@ -92,10 +86,7 @@ const LandingPage = () => {
 
                 <div className="container">
                     <div className="hero-content">
-                        <div className="hero-badge">
-                            <span className="badge-dot"></span>
-                            Now serving 10,000+ users daily
-                        </div>
+
 
                         <h1 className="hero-title">
                             Skip the Wait,
@@ -216,19 +207,7 @@ const LandingPage = () => {
                 </div>
             </section>
 
-            {/* Stats Section */}
-            <section className="stats-section">
-                <div className="container">
-                    <div className="stats-grid">
-                        {stats.map((stat, index) => (
-                            <div key={index} className="stat-card">
-                                <div className="stat-value">{stat.value}</div>
-                                <div className="stat-label">{stat.label}</div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
+
 
             {/* Features Section */}
             <section className="features-section">
