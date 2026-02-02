@@ -1,16 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { 
-  registerUser, 
-  loginUser, 
-  staffLogin, 
-  adminLogin, 
-  superAdminLogin,
-  selectRole,
-  assignRoleToUser,
-  removeRoleFromUser,
-  getUserRoles
-} = require('../controllers/authController');
+const { registerUser, loginUser, staffLogin, adminLogin, superAdminLogin } = require('../controllers/authController');
+const { googleLogin } = require('../controllers/googleAuthController');
 const { validateRegister, validateLogin, validateStaffLogin } = require('../middleware/validationMiddleware');
 
 // Register a new user
@@ -18,6 +9,9 @@ router.post('/register', validateRegister, registerUser);
 
 // Login user (general login - fetches roles from database)
 router.post('/login', validateLogin, loginUser);
+
+// Google login
+router.post('/google-login', googleLogin);
 
 // Select role when multiple roles are available
 router.post('/select-role', selectRole);

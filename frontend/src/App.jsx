@@ -29,6 +29,7 @@ import AdminCustomerManagementPage from './features/admin/pages/AdminCustomerMan
 import AdminAnalyticsPage from './features/admin/pages/AdminAnalyticsPage';
 import AdminQueueManagementPage from './features/admin/pages/AdminQueueManagementPage';
 import AdminSettingsPage from './features/admin/pages/AdminSettingsPage';
+import SystemDashboardPage from './features/admin/pages/SystemDashboard';
 
 // Other Pages (need to categorize)
 import QRScanPage from './features/customer/pages/QRScanPage';
@@ -86,10 +87,10 @@ function App() {
               }
             />
             <Route
-              path="/scan"
+              path="/customer/queue/:queueId"
               element={
-                <PrivateRoute>
-                  <QRScanPage />
+                <PrivateRoute roles={['CUSTOMER']}>
+                  <CustomerQueuePage />
                 </PrivateRoute>
               }
             />
@@ -120,6 +121,14 @@ function App() {
               element={
                 <PrivateRoute roles={['ORGANISATION_ADMIN', 'SUPER_ADMIN']}>
                   <AdminDashboardPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/admin/system"
+              element={
+                <PrivateRoute roles={['ORGANISATION_ADMIN', 'SUPER_ADMIN']}>
+                  <SystemDashboardPage />
                 </PrivateRoute>
               }
             />

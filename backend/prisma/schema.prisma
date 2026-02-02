@@ -15,7 +15,7 @@ model User {
   password       String?
   firstName      String
   lastName       String
-  phoneNumber    String?
+  phoneNumber    String?        @unique
   organisationId String?
   roleId         String
   isVerified     Boolean  @default(false)
@@ -30,27 +30,17 @@ model User {
   userTokens    Token[]        @relation("UserTokens")
   notifications  Notification[]
   calledTokens   Token[]        @relation("TokenCaller")
-  assignedQueues Queue[]        @relation("AdminQueues")
-  
-  // Lineage Security
-  creatorId     String?
-  creator       User?          @relation("UserLineage", fields: [creatorId], references: [id])
-  createdUsers  User[]         @relation("UserLineage")
-}
+  userTokens     Token[]        @relation("UserTokens")
+  auditLogs      UserAuditLog[] @relation("UserAuditLogs")
+  creator        User?          @relation("UserLineage", fields: [creatorId], references: [id])
+  createdUsers   User[]         @relation("UserLineage")
+  organisation   Organisation?  @relation(fields: [organisationId], references: [id])
+  roleModel      RoleModel      @relation(fields: [roleId], references: [id])
 
-// UserRole junction table for many-to-many relationship
-model UserRole {
-  id        String   @id @default(cuid())
-  userId    String
-  roleId    String
-  createdAt DateTime @default(now())
-
-  // Relations
-  user      User      @relation("UserToUserRoles", fields: [userId], references: [id], onDelete: Cascade)
-  role      RoleModel @relation("RoleToUserRoles", fields: [roleId], references: [id], onDelete: Cascade)
-
-  // Unique constraint to prevent duplicate role assignments
-  @@unique([userId, roleId])
+  @@index([email])
+  @@index([organisationId])
+  @@index([roleId])
+  @@index([creatorId])
 }
 
 // Role model
@@ -111,6 +101,11 @@ model Queue {
   organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
   admin          User?        @relation("AdminQueues", fields: [adminId], references: [id])
   tokens         Token[]
+
+  @@unique([organisationId, name])
+  @@index([organisationId])
+  @@index([isActive])
+  @@index([createdAt])
 }
 
 // Token model
@@ -132,32 +127,12 @@ model Token {
   notes          String?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
-
-  // Relations
-  queue        Queue        @relation(fields: [queueId], references: [id], onDelete: Cascade)
-  tokenUser    User?        @relation("UserTokens", fields: [userId], references: [id])
-  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
-  caller       User?        @relation("TokenCaller", fields: [callerId], references: [id])
+  caller         User?         @relation("TokenCaller", fields: [callerId], references: [id])
+  organisation   Organisation  @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  queue          Queue         @relation(fields: [queueId], references: [id], onDelete: Cascade)
+  tokenUser      User?         @relation("UserTokens", fields: [userId], references: [id])
 }
 
-// Token status enumeration
-enum TokenStatus {
-  PENDING
-  CALLED
-  SERVED
-  CANCELLED
-  MISSED
-  ABANDONED
-}
-
-// Token priority enumeration
-enum TokenPriority {
-  NORMAL
-  PRIORITY
-  EMERGENCY
-}
-
-// Notification model
 model Notification {
   id             String           @id @default(cuid())
   userId         String

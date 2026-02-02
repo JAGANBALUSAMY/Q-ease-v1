@@ -43,10 +43,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Request logging middleware
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
-  next();
-});
+const requestLogger = require('./middleware/requestLogger');
+app.use(requestLogger);
+
 
 // Make io accessible to routes
 app.set('io', io);
@@ -121,6 +120,8 @@ const { createTenant } = require('./controllers/systemAdminController');
 const { createAdmin, getMyAdmins } = require('./controllers/superUserController');
 const usersRoutes = require('./routes/users');
 const qrCodeRoutes = require('./routes/qrCodeRoutes');
+const userManagementRoutes = require('./routes/userManagementRoutes');
+const systemRoutes = require('./routes/systemRoutes');
 
 // Use routes
 app.use('/api/auth', authRoutes);
@@ -130,6 +131,8 @@ app.use('/api/tokens', tokenRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/qr', qrCodeRoutes);
+app.use('/api/user-management', userManagementRoutes);
+app.use('/api/system', systemRoutes);
 
 // System routes
 app.post('/api/system/create-tenant', systemAuth, createTenant);

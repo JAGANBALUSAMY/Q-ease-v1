@@ -46,6 +46,7 @@ const getAllQueues = async (req, res) => {
         createdAt: 'desc'
       }
     });
+
     // Format queues with current token and counts
     const formattedQueues = queues.map((queue) => {
       // Safely access tokens array
@@ -78,6 +79,8 @@ const getAllQueues = async (req, res) => {
     });
   } catch (error) {
     console.error('Get all queues error:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Error message:', error.message);
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve queues',

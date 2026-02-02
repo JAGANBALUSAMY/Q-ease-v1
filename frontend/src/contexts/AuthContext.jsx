@@ -119,6 +119,50 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const loginWithGoogle = async () => {
+    try {
+      // Import Firebase auth dynamically
+      const { signInWithGoogle } = await import('../config/firebase');
+
+      // Sign in with Google
+      const result = await signInWithGoogle();
+
+      if (!result.success) {
+        return { success: false, error: result.error };
+      }
+
+      // Send Google ID token to backend for verification
+      const response = await api.post('/auth/google-login', {
+        idToken: result.idToken,
+        email: result.user.email,
+        displayName: result.user.displayName,
+        photoURL: result.user.photoURL
+      });
+
+      const { token, user: userData } = response.data.data;
+
+      // Store in localStorage
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(userData));
+
+      // Set user state
+      setUser(userData);
+
+      // Set default authorization header
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+      return { success: true, user: userData };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Google login failed';
+      return { success: false, error: message };
+    }
+  };
+
+  const updateUser = (userData) => {
+    setUser(userData);
+    localStorage.setItem('user', JSON.stringify(userData));
+  };
+
   const logout = () => {
     // Clear localStorage
     localStorage.removeItem('token');
@@ -131,15 +175,10 @@ export const AuthProvider = ({ children }) => {
     delete api.defaults.headers.common['Authorization'];
   };
 
-  const updateUser = (userData) => {
-    setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
-  };
-
   const value = {
     user,
     login,
-    selectRole,
+    loginWithGoogle,
     register,
     logout,
     updateUser,
