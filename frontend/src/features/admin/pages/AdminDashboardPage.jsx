@@ -41,7 +41,7 @@ const AdminDashboardPage = () => {
         customerCount: apiStats.customerCount || 0,
         adminCount: apiStats.adminCount || 0
       });
-      setRecentActivity(activityRes.data.activity || []);
+      setRecentActivity(activityRes.data.data.activities || []);
       setQueues(queuesRes.data.data.queues || []);
     } catch (err) {
       console.error('Error fetching dashboard data:', err);

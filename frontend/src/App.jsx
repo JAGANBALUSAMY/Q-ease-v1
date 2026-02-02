@@ -214,11 +214,12 @@ function App() {
             <Route
               path="/notifications"
               element={
-                <PrivateRoute>
+                <PrivateRoute roles={['USER', 'CUSTOMER']}>
                   <NotificationsPage />
                 </PrivateRoute>
               }
             />
+
 
             {/* Catch all - 404 Not Found */}
             <Route path="*" element={<NotFoundPage />} />

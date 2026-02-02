@@ -134,6 +134,11 @@ app.use('/api/qr', qrCodeRoutes);
 app.use('/api/user-management', userManagementRoutes);
 app.use('/api/system', systemRoutes);
 
+// Bootstrap route - ONE-TIME super admin creation (no auth required)
+// This endpoint self-disables after first super admin is created
+const { bootstrapSuperAdmin } = require('./controllers/bootstrapController');
+app.post('/api/bootstrap/super-admin', bootstrapSuperAdmin);
+
 // System routes
 app.post('/api/system/create-tenant', systemAuth, createTenant);
 

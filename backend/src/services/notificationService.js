@@ -31,12 +31,13 @@ const sendTokenCreatedNotification = async (token, user) => {
   try {
     if (!user) {
       user = await prisma.user.findUnique({
-        where: { id: token.userId }
+        where: { id: token.userId },
+        include: { roleModel: true }
       });
     }
 
-    if (!user) {
-      console.error('User not found for token notification');
+    if (!user || user.roleModel?.name !== 'USER') {
+      console.log(`ℹ️ Skipping notification for non-customer user ${user?.email || 'unknown'}`);
       return;
     }
 
@@ -110,12 +111,13 @@ const sendTokenCalledNotification = async (token, user) => {
   try {
     if (!user) {
       user = await prisma.user.findUnique({
-        where: { id: token.userId }
+        where: { id: token.userId },
+        include: { roleModel: true }
       });
     }
 
-    if (!user) {
-      console.error('User not found for token notification');
+    if (!user || user.roleModel?.name !== 'USER') {
+      console.log(`ℹ️ Skipping notification for non-customer user ${user?.email || 'unknown'}`);
       return;
     }
 
@@ -203,11 +205,12 @@ const sendTokenNearingServiceNotification = async (token, user) => {
   try {
     if (!user) {
       user = await prisma.user.findUnique({
-        where: { id: token.userId }
+        where: { id: token.userId },
+        include: { roleModel: true }
       });
     }
 
-    if (!user) return;
+    if (!user || user.roleModel?.name !== 'USER') return;
 
     const notificationTitle = 'Your Token is Approaching';
     const notificationBody = `Token ${token.tokenId} is nearly up! Please proceed to the service counter.`;
@@ -263,10 +266,8 @@ const sendQueueStatusUpdateNotification = async (queueId, status, message) => {
       },
       include: {
         tokenUser: {
-          select: {
-            id: true,
-            email: true,
-            deviceToken: true
+          include: {
+            roleModel: true
           }
         }
       }
@@ -274,7 +275,7 @@ const sendQueueStatusUpdateNotification = async (queueId, status, message) => {
 
     // Send notification to each user
     for (const token of activeTokens) {
-      if (!token.tokenUser) continue;
+      if (!token.tokenUser || token.tokenUser.roleModel?.name !== 'USER') continue;
 
       // Send push notification
       if (firebaseInitialized && token.tokenUser.deviceToken) {

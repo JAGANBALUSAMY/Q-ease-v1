@@ -1,15 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Q-Ease System Admin Tool</title>
+    <title>Q-Ease Bootstrap - First Super Admin</title>
     <style>
         :root {
             --primary: #2563eb;
             --primary-dark: #1d4ed8;
             --success: #10b981;
             --error: #ef4444;
+            --warning: #f59e0b;
             --gray-100: #f3f4f6;
             --gray-200: #e5e7eb;
             --gray-700: #374151;
@@ -45,8 +47,23 @@
         p.subtitle {
             text-align: center;
             color: var(--gray-700);
-            margin-bottom: 2rem;
+            margin-bottom: 1rem;
             font-size: 0.9rem;
+        }
+
+        .info-box {
+            background: #dbeafe;
+            border: 1px solid #3b82f6;
+            color: #1e40af;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.875rem;
+        }
+
+        .info-box strong {
+            display: block;
+            margin-bottom: 0.5rem;
         }
 
         .form-group {
@@ -60,6 +77,16 @@
             color: var(--gray-700);
         }
 
+        label .optional {
+            font-weight: 400;
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
         input {
             width: 100%;
             padding: 0.75rem;
@@ -70,10 +97,36 @@
             transition: border-color 0.15s;
         }
 
+        input.error {
+            border-color: var(--error);
+        }
+
         input:focus {
             outline: none;
             border-color: var(--primary);
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: var(--gray-700);
+            user-select: none;
+            font-size: 1.2rem;
+        }
+
+        .error-message {
+            color: var(--error);
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
         }
 
         button {
@@ -139,19 +192,21 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
-        <h1>Create Tenant</h1>
-        <p class="subtitle">System Owner Tool</p>
+        <h1>🚀 Bootstrap Q-Ease</h1>
+        <p class="subtitle">Create Your First Super Admin</p>
+
+        <div class="info-box">
+            <strong>ℹ️ One-Time Setup</strong>
+            This page creates the first super admin account. After creation, this endpoint will be automatically
+            disabled for security. Future tenants must be created by authenticated super admins.
+        </div>
 
         <div id="alert" class="alert"></div>
 
         <form id="createForm">
-            <div class="form-group">
-                <label for="systemKey">System Secret Key</label>
-                <input type="password" id="systemKey" required placeholder="Enter system secret key">
-            </div>
-
             <div class="divider">
                 <span>Organization Details</span>
             </div>
@@ -159,11 +214,14 @@
             <div class="form-group">
                 <label for="orgName">Organization Name</label>
                 <input type="text" id="orgName" required placeholder="e.g. Acme Corp">
+                <div class="error-message" id="orgNameError"></div>
             </div>
 
             <div class="form-group">
                 <label for="orgCode">Organization Code (6 CHARS)</label>
-                <input type="text" id="orgCode" required maxlength="6" pattern="[A-Za-z0-9]{6}" placeholder="e.g. ACME01" style="text-transform: uppercase;">
+                <input type="text" id="orgCode" required maxlength="6" pattern="[A-Za-z0-9]{6}"
+                    placeholder="e.g. ACME01" style="text-transform: uppercase;">
+                <div class="error-message" id="orgCodeError"></div>
             </div>
 
             <div class="divider">
@@ -173,29 +231,37 @@
             <div class="form-group">
                 <label for="firstName">First Name</label>
                 <input type="text" id="firstName" required>
+                <div class="error-message" id="firstNameError"></div>
             </div>
 
             <div class="form-group">
                 <label for="lastName">Last Name</label>
                 <input type="text" id="lastName" required>
+                <div class="error-message" id="lastNameError"></div>
             </div>
 
             <div class="form-group">
                 <label for="email">Email Address</label>
                 <input type="email" id="email" required>
+                <div class="error-message" id="emailError"></div>
             </div>
 
             <div class="form-group">
-                <label for="password">Password</label>
-                <input type="text" id="password" required minlength="6">
+                <label for="password">Password (min 6 characters)</label>
+                <div class="input-wrapper">
+                    <input type="password" id="password" required minlength="6">
+                    <span class="password-toggle" onclick="togglePassword('password')">👁️</span>
+                </div>
+                <div class="error-message" id="passwordError"></div>
             </div>
 
             <div class="form-group">
-                <label for="phoneNumber">Phone Number</label>
-                <input type="tel" id="phoneNumber">
+                <label for="phoneNumber">Phone Number <span class="optional">(optional)</span></label>
+                <input type="tel" id="phoneNumber" placeholder="10 digits" maxlength="10">
+                <div class="error-message" id="phoneNumberError"></div>
             </div>
 
-            <button type="submit" id="submitBtn">Create Tenant</button>
+            <button type="submit" id="submitBtn">Create First Super Admin</button>
         </form>
     </div>
 
@@ -204,33 +270,102 @@
         const alertBox = document.getElementById('alert');
         const submitBtn = document.getElementById('submitBtn');
 
+        function togglePassword(inputId) {
+            const input = document.getElementById(inputId);
+            input.type = input.type === 'password' ? 'text' : 'password';
+        }
+
+        function validatePhone(phone) {
+            if (!phone) return true;
+            return /^\d{10}$/.test(phone);
+        }
+
+        function validateOrgCode(code) {
+            return /^[A-Za-z0-9]{6}$/.test(code);
+        }
+
+        function showError(fieldId, message) {
+            const errorElement = document.getElementById(fieldId + 'Error');
+            const inputElement = document.getElementById(fieldId);
+            errorElement.textContent = message;
+            errorElement.classList.add('show');
+            inputElement.classList.add('error');
+        }
+
+        function clearError(fieldId) {
+            const errorElement = document.getElementById(fieldId + 'Error');
+            const inputElement = document.getElementById(fieldId);
+            errorElement.classList.remove('show');
+            inputElement.classList.remove('error');
+        }
+
+        function clearAllErrors() {
+            ['orgName', 'orgCode', 'firstName', 'lastName', 'email', 'password', 'phoneNumber'].forEach(clearError);
+        }
+
+        document.getElementById('phoneNumber').addEventListener('input', function (e) {
+            const phone = e.target.value;
+            if (phone && !validatePhone(phone)) {
+                showError('phoneNumber', 'Phone number must be exactly 10 digits');
+            } else {
+                clearError('phoneNumber');
+            }
+        });
+
+        document.getElementById('orgCode').addEventListener('input', function (e) {
+            this.value = this.value.toUpperCase();
+            const code = e.target.value;
+            if (code && !validateOrgCode(code)) {
+                showError('orgCode', 'Organization code must be exactly 6 alphanumeric characters');
+            } else {
+                clearError('orgCode');
+            }
+        });
+
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
-            // Reset alert
+
+            clearAllErrors();
             alertBox.className = 'alert';
             alertBox.style.display = 'none';
+
+            let isValid = true;
+
+            const phoneNumber = document.getElementById('phoneNumber').value;
+            if (phoneNumber && !validatePhone(phoneNumber)) {
+                showError('phoneNumber', 'Phone number must be exactly 10 digits');
+                isValid = false;
+            }
+
+            const orgCode = document.getElementById('orgCode').value;
+            if (!validateOrgCode(orgCode)) {
+                showError('orgCode', 'Organization code must be exactly 6 alphanumeric characters');
+                isValid = false;
+            }
+
+            if (!isValid) return;
+
             submitBtn.disabled = true;
             submitBtn.textContent = 'Creating...';
 
             const formData = {
                 orgName: document.getElementById('orgName').value,
-                orgCode: document.getElementById('orgCode').value.toUpperCase(),
+                orgCode: orgCode.toUpperCase(),
                 firstName: document.getElementById('firstName').value,
                 lastName: document.getElementById('lastName').value,
                 email: document.getElementById('email').value,
                 password: document.getElementById('password').value,
-                phoneNumber: document.getElementById('phoneNumber').value,
             };
 
-            const systemKey = document.getElementById('systemKey').value;
+            if (phoneNumber) {
+                formData.phoneNumber = phoneNumber;
+            }
 
             try {
-                const response = await fetch('http://localhost:5000/api/system/create-tenant', {
+                const response = await fetch('http://localhost:5000/api/bootstrap/super-admin', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'x-system-key': systemKey
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify(formData)
                 });
@@ -238,19 +373,17 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    showAlert('success', `Success! Tenant created.<br>Org Code: <strong>${data.data.organisation.code}</strong><br>Admin: <strong>${data.data.user.email}</strong>`);
-                    form.reset();
-                    // Restore system key for convenience
-                    document.getElementById('systemKey').value = systemKey;
+                    showAlert('success', `✅ Success! First super admin created!<br><br><strong>Organization:</strong> ${data.data.organisation.name}<br><strong>Org Code:</strong> ${data.data.organisation.code}<br><strong>Email:</strong> ${data.data.user.email}<br><br>🔒 This bootstrap endpoint is now disabled.<br>You can now <a href="http://localhost:5173/login" style="color: #065f46; font-weight: bold;">login</a> with your credentials!`);
+                    form.style.display = 'none';
                 } else {
-                    showAlert('error', data.message || 'Failed to create tenant');
+                    showAlert('error', data.message || 'Failed to create super admin');
                 }
             } catch (error) {
                 showAlert('error', 'Network error. Is the backend running?');
                 console.error(error);
             } finally {
                 submitBtn.disabled = false;
-                submitBtn.textContent = 'Create Tenant';
+                submitBtn.textContent = 'Create First Super Admin';
             }
         });
 
@@ -259,11 +392,7 @@
             alertBox.innerHTML = message;
             alertBox.style.display = 'block';
         }
-
-        // Force uppercase on org code input
-        document.getElementById('orgCode').addEventListener('input', function(e) {
-            this.value = this.value.toUpperCase();
-        });
     </script>
 </body>
+
 </html>

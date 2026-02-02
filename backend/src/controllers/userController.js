@@ -10,33 +10,42 @@ const { getUserNotifications, markNotificationAsRead } = require('../services/no
 
 // Get user profile
 const getUserProfile = async (req, res) => {
-  try {
-    const user = await prisma.user.findFirst({
-      where: { id: req.user.id }
-    });
+    try {
+        const user = await prisma.user.findFirst({
+            where: { id: req.user.id },
+            include: {
+                roleModel: true,
+                organisation: true
+            }
+        });
 
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    res.json({
-      success: true,
-      data: {
-        user: {
-          firstName: user.firstName || '',
-          lastName: user.lastName || '',
-          email: user.email || '',
-          phone: user.phoneNumber || ''
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
         }
-      }
-    });
-  } catch (err) {
-    console.error('PROFILE ERROR:', err);
-    res.status(500).json({ message: 'Profile failed' });
-  }
+
+        res.json({
+            success: true,
+            data: {
+                user: {
+                    id: user.id,
+                    firstName: user.firstName || '',
+                    lastName: user.lastName || '',
+                    email: user.email || '',
+                    phone: user.phoneNumber || '',
+                    role: user.roleModel?.name,
+                    roleModel: user.roleModel,
+                    organisation: user.organisation,
+                    organisationId: user.organisationId
+                }
+            }
+        });
+    } catch (err) {
+        console.error('PROFILE ERROR:', err);
+        res.status(500).json({ message: 'Profile failed' });
+    }
 };
 
 // Update user profile
@@ -171,7 +180,7 @@ const markNotificationRead = async (req, res) => {
 async function getAllUsers(req, res) {
     try {
         const { organisationId } = req.user;
-        const isAdmin = req.user.role === 'ADMIN' || req.user.role === 'ORGANISATION_ADMIN';
+        const isAdmin = req.user.role === 'ORGANISATION_ADMIN';
         const isSuperAdmin = req.user.role === 'SUPER_ADMIN';
 
         let where = {};
@@ -249,11 +258,11 @@ async function createUser(req, res) {
         // Check if user already exists
         const existingUser = await prisma.user.findUnique({
             where: { email },
-            include: { userRoles: true }
+            include: { roleModel: true }
         });
 
         const roleName = role.toUpperCase() === 'ADMIN' ? 'ORGANISATION_ADMIN' : role.toUpperCase();
-        
+
         // Find the role record
         const roleRecord = await prisma.roleModel.findFirst({
             where: { name: roleName }
@@ -268,54 +277,19 @@ async function createUser(req, res) {
 
         // Handle existing user
         if (existingUser) {
-            console.log(`User exists. Checking if role '${roleName}' can be added.`);
-
-            // Check if user already has this role
-            const hasRole = existingUser.userRoles.some(ur => ur.roleId === roleRecord.id);
-            if (hasRole) {
-                return res.status(409).json({
-                    success: false,
-                    message: 'User already has this role'
-                });
-            }
-
-            // Check organization consistency
-            if (existingUser.organisationId && existingUser.organisationId !== creatorOrgId && !isCreatorSuperAdmin) {
-                 return res.status(409).json({
-                    success: false,
-                    message: 'User belongs to another organization. Cannot add them.'
-                });
-            }
-
-            // Add role to existing user
-            await prisma.userRole.create({
-                data: {
-                    userId: existingUser.id,
-                    roleId: roleRecord.id
-                }
-            });
-
-            // If user had no organization, assign them to this one
-            if (!existingUser.organisationId && creatorOrgId) {
-                await prisma.user.update({
-                    where: { id: existingUser.id },
-                    data: { organisationId: creatorOrgId }
-                });
-            }
-
-            return res.status(200).json({
-                success: true,
-                message: 'Role added to existing user successfully',
-                data: { user: existingUser }
+            console.log(`User exists with role ${existingUser.roleModel.name}`);
+            return res.status(409).json({
+                success: false,
+                message: `User already exists with role ${existingUser.roleModel.name}`
             });
         }
-        
+
         // --- Create New User ---
 
         // Determine Organisation ID (same logic as before)
         let targetOrgId = creatorOrgId;
         if (!targetOrgId && !isCreatorSuperAdmin) {
-             // Logic kept from original
+            // Logic kept from original
         }
 
         console.log('Creating user with Org ID:', targetOrgId);
@@ -333,13 +307,7 @@ async function createUser(req, res) {
                 organisationId: targetOrgId,
                 isVerified: true,
                 isActive: true,
-                creatorId: req.user.id,
-                // CRITICAL: Create the UserRole entry for new users too
-                userRoles: {
-                    create: {
-                        roleId: roleRecord.id
-                    }
-                }
+                creatorId: req.user.id
             },
             select: {
                 id: true,

@@ -4,40 +4,35 @@
 
 export const ROLES = {
     SUPER_ADMIN: 'SUPER_ADMIN',
-    ORGANISATION_ADMIN: 'ORGANISATION_ADMIN', // Often referred to as ADMIN in UI
+    ORGANISATION_ADMIN: 'ORGANISATION_ADMIN',
     STAFF: 'STAFF',
-    USER: 'USER', // Also 'customer' in some contexts
+    USER: 'USER'
 };
 
 export const DASHBOARD_ROUTES = {
     [ROLES.SUPER_ADMIN]: '/super-admin/dashboard',
     [ROLES.ORGANISATION_ADMIN]: '/admin/dashboard',
     [ROLES.STAFF]: '/staff/dashboard',
-    [ROLES.USER]: '/',
+    [ROLES.USER]: '/browse' // Default for customers/users
+};
+
+/**
+ * Normalizes role names from various sources (DB, older code, etc.)
+ */
+export const normalizeRole = (role) => {
+    if (!role) return ROLES.USER;
+    const r = role.toUpperCase();
+    if (r === 'ADMIN') return ROLES.ORGANISATION_ADMIN;
+    if (r === 'CUSTOMER' || r === 'USER') return ROLES.USER;
+    return r;
 };
 
 /**
  * Returns the dashboard path for a given user based on their role.
- * @param {Object} user - The user object from auth context.
- * @returns {string} The absolute path to the user's dashboard.
  */
 export const getDashboardPath = (user) => {
-    if (!user || !user.role) {
-        return '/';
-    }
-
-    // Normalize role to handle potential case sensitivity or mapping issues
-    const role = user.role.toUpperCase();
-
-    // Handle potential 'ADMIN' alias for ORGANISATION_ADMIN if it exists in DB
-    if (role === 'ADMIN') {
-        return DASHBOARD_ROUTES[ROLES.ORGANISATION_ADMIN];
-    }
-
-    // Handle 'customer' alias
-    if (role === 'CUSTOMER') {
-        return DASHBOARD_ROUTES[ROLES.USER];
-    }
-
+    if (!user) return '/';
+    const role = normalizeRole(user.role || user.roleModel?.name);
     return DASHBOARD_ROUTES[role] || '/';
 };
+

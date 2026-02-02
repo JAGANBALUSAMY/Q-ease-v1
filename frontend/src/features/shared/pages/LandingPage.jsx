@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../contexts/AuthContext';
-import api from '../../../services/api';
+import { getDashboardPath } from '../../../utils/roleUtils';
+import api from '../../../utils/api';
 import '../styles/LandingPage.css';
 
 const LandingPage = () => {
@@ -13,17 +14,8 @@ const LandingPage = () => {
 
     // Redirect if user is logged in
     useEffect(() => {
-        if (loading) return;
-
-        // If user is logged in, redirect to their dashboard
-        if (user) {
-            if (user.role === 'SUPER_ADMIN' || user.role === 'ORGANISATION_ADMIN') {
-                navigate('/admin/dashboard', { replace: true });
-            } else if (user.role === 'STAFF') {
-                navigate('/staff/dashboard', { replace: true });
-            } else if (user.role === 'CUSTOMER') {
-                navigate('/browse', { replace: true });
-            }
+        if (!loading && user) {
+            navigate(getDashboardPath(user), { replace: true });
         }
     }, [user, loading, navigate]);
 

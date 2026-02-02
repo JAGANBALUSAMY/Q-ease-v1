@@ -491,7 +491,7 @@ const cancelToken = async (req, res) => {
     }
 
     // Check if user owns the token or is staff
-    if (token.userId !== userId && !['STAFF', 'ADMIN', 'SUPER_ADMIN'].includes(req.user.role)) {
+    if (token.userId !== userId && !['STAFF', 'ORGANISATION_ADMIN', 'SUPER_ADMIN'].includes(req.user.role)) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to cancel this token'

@@ -12,43 +12,59 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // Sync initialization from localStorage to prevent "null user" flicker on refresh
+  const [user, setUser] = useState(() => {
+    const savedUser = localStorage.getItem('user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+  const [loading, setLoading] = useState(() => {
+    // If we have a token but no user, or just want to verify, we stay loading.
+    // If we have both, we can show the UI immediately while verifying in background.
+    return !!localStorage.getItem('token') && !localStorage.getItem('user');
+  });
 
   useEffect(() => {
-  const token = localStorage.getItem('token');
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setLoading(false);
+      return;
+    }
 
-  if (!token) {
-    setLoading(false);
-    return;
-  }
+    // Set authorization header for the verification request
+    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-  api.get('/users/profile')
-    .then(res => {
-      const user = res.data.data.user;
-      setUser(user);
-      localStorage.setItem('user', JSON.stringify(user));
-    })
-    .catch(() => {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      setUser(null);
-    })
-    .finally(() => setLoading(false));
-}, []);
+    // Verify session in background
+    api.get('/users/profile')
+      .then(res => {
+        const userData = res.data.data.user;
+        setUser(prevUser => {
+          const mergedUser = { ...prevUser, ...userData };
+          localStorage.setItem('user', JSON.stringify(mergedUser));
+          return mergedUser;
+        });
+      })
+      .catch(() => {
+        // Only clear if verification fails
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setUser(null);
+        delete api.defaults.headers.common['Authorization'];
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
 
   const login = async (email, password) => {
     try {
       // Always use the unified login endpoint
       const response = await api.post('/auth/login', { email, password });
-      
+
       const { data } = response.data;
 
       // Check if role selection is required
       if (data.requiresRoleSelection) {
-        return { 
-          success: true, 
+        return {
+          success: true,
           requiresRoleSelection: true,
           availableRoles: data.availableRoles,
           userId: data.userId

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../utils/api';
-import './SystemDashboard.css';
+import '../styles/SystemDashboard.css';
 
 const SystemDashboard = () => {
     const [activeTab, setActiveTab] = useState('logs');

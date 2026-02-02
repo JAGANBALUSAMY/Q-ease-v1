@@ -41,7 +41,7 @@ const Navbar = () => {
                     <div className="navbar-links desktop-only">
                         {user ? (
                             <>
-                                
+
                                 {/* Customer Links */}
                                 {(!user.role || user.role === 'customer' || user.role === 'USER') && (
                                     <>
@@ -67,7 +67,7 @@ const Navbar = () => {
                                 )}
 
                                 {/* Staff Links
-                                {['STAFF', 'ADMIN', 'SUPER_ADMIN'].includes(user.role) && (
+                                {['STAFF', 'ORGANISATION_ADMIN', 'SUPER_ADMIN'].includes(user.role) && (
                                     <Link to="/staff/dashboard" className="nav-link">
                                         <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -77,7 +77,7 @@ const Navbar = () => {
                                 )} */}
 
                                 {/* Admin Links */}
-                                {['ADMIN', 'SUPER_ADMIN'].includes(user.role) && (
+                                {['ORGANISATION_ADMIN', 'SUPER_ADMIN'].includes(user.role) && (
                                     <>
                                         <Link to="/admin/dashboard" className="nav-link">
                                             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -92,6 +92,26 @@ const Navbar = () => {
                                             </svg>
                                             Queues
                                         </Link>
+                                        <Link to="/admin/users" className="nav-link">
+                                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                                            </svg>
+                                            Staff
+                                        </Link>
+                                        <Link to="/admin/customers" className="nav-link">
+                                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                            </svg>
+                                            Customers
+                                        </Link>
+                                        {['ORGANISATION_ADMIN', 'SUPER_ADMIN'].includes(user.role) && (
+                                            <Link to="/admin/system" className="nav-link">
+                                                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                                                </svg>
+                                                System
+                                            </Link>
+                                        )}
                                     </>
                                 )}
                             </>
@@ -122,12 +142,15 @@ const Navbar = () => {
                                             </svg>
                                             Profile
                                         </Link>
-                                        <Link to="/notifications" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
-                                            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                                            </svg>
-                                            Notifications
-                                        </Link>
+                                        {(user.role === 'customer' || user.role === 'USER') && (
+                                            <Link to="/notifications" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
+                                                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                                </svg>
+                                                Notifications
+                                            </Link>
+                                        )}
+
                                         <div className="dropdown-divider"></div>
                                         <button className="dropdown-item" onClick={handleLogout}>
                                             <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -182,10 +205,22 @@ const Navbar = () => {
                                 )}
 
 
-                                {/* Admin Links */}
-                                {['ADMIN', 'SUPER_ADMIN'].includes(user.role) && (
-                                    <Link to="/admin/dashboard" className="mobile-link" onClick={() => setIsMenuOpen(false)}>
-                                        Admin Dashboard
+                                {['ORGANISATION_ADMIN', 'SUPER_ADMIN'].includes(user.role) && (
+                                    <>
+                                        <Link to="/admin/dashboard" className="mobile-link" onClick={() => setIsMenuOpen(false)}>
+                                            Admin Dashboard
+                                        </Link>
+                                        <Link to="/admin/users" className="mobile-link" onClick={() => setIsMenuOpen(false)}>
+                                            Staff Management
+                                        </Link>
+                                        <Link to="/admin/customers" className="mobile-link" onClick={() => setIsMenuOpen(false)}>
+                                            Customer Management
+                                        </Link>
+                                    </>
+                                )}
+                                {['ORGANISATION_ADMIN', 'SUPER_ADMIN'].includes(user.role) && (
+                                    <Link to="/admin/system" className="mobile-link" onClick={() => setIsMenuOpen(false)}>
+                                        System Dashboard
                                     </Link>
                                 )}
 

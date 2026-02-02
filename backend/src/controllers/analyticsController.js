@@ -46,9 +46,9 @@ const getAdminStats = async (req, res) => {
     const { organisationId, isGlobal, adminId, error } = resolveScope(req);
     if (error) return res.json({ success: true, data: { totalUsers: 0, totalQueues: 0, activeTokens: 0, staffCount: 0, customerCount: 0, adminCount: 0 } });
 
-    const userWhere = isGlobal ? {} : { organisationId };
+    const userWhere = isGlobal ? {} : { organisationId: organisationId || undefined };
     const queueWhere = {
-      ...(isGlobal ? {} : { organisationId }),
+      ...(isGlobal ? {} : { organisationId: organisationId || undefined }),
       ...(adminId ? { adminId } : {})
     };
     const tokenWhere = {
@@ -87,7 +87,7 @@ const getAdminStats = async (req, res) => {
       prisma.user.count({
         where: {
           ...userWhere,
-          roleModel: { name: { in: ['ADMIN', 'ORGANISATION_ADMIN'] } }
+          roleModel: { name: 'ORGANISATION_ADMIN' }
         }
       }),
       // Get completed tokens from today for average wait time calculation
@@ -210,7 +210,7 @@ const getOverview = async (req, res) => {
     const tokenFilter = {
       status: 'SERVED',
       servedAt: { gte: today },
-      ...(isGlobal ? {} : { queue: { organisationId } })
+      ...(isGlobal ? {} : { queue: { organisationId: organisationId || undefined } })
     };
 
     const feedbackFilter = {
@@ -263,9 +263,9 @@ const getRealtimeOverview = async (req, res) => {
     const { organisationId, isGlobal, error } = resolveScope(req);
     if (error) return res.json({ success: true, data: {} });
 
-    const queueFilter = { isActive: true, ...(isGlobal ? {} : { organisationId }) };
-    const tokenFilter = { queue: { isActive: true, ...(isGlobal ? {} : { organisationId }) } };
-    const staffFilter = { role: 'STAFF', isActive: true, ...(isGlobal ? {} : { organisationId }) };
+    const queueFilter = { isActive: true, ...(isGlobal ? {} : { organisationId: organisationId || undefined }) };
+    const tokenFilter = { queue: { isActive: true, ...(isGlobal ? {} : { organisationId: organisationId || undefined }) } };
+    const staffFilter = { roleModel: { name: 'STAFF' }, isActive: true, ...(isGlobal ? {} : { organisationId: organisationId || undefined }) };
 
     const [activeQueues, waitingCustomers, servedToday, staffOnline] = await Promise.all([
       prisma.queue.count({ where: queueFilter }),
@@ -303,7 +303,7 @@ const getRealtimeQueues = async (req, res) => {
     const { organisationId, isGlobal, error } = resolveScope(req);
     if (error) return res.json({ success: true, data: [] });
 
-    const queueFilter = { isActive: true, ...(isGlobal ? {} : { organisationId }) };
+    const queueFilter = { isActive: true, ...(isGlobal ? {} : { organisationId: organisationId || undefined }) };
 
     const queues = await prisma.queue.findMany({
       where: queueFilter,
@@ -343,14 +343,14 @@ const getRealtimeAlerts = async (req, res) => {
     const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
     const alerts = [];
 
-    const queueFilter = { isActive: true, ...(isGlobal ? {} : { organisationId }) };
+    const queueFilter = { isActive: true, ...(isGlobal ? {} : { organisationId: organisationId || undefined }) };
 
     // Check for long wait times
     const longWaitTokens = await prisma.token.count({
       where: {
         status: 'WAITING',
         issuedAt: { lt: oneHourAgo },
-        queue: { ...(isGlobal ? {} : { organisationId }) }
+        queue: { ...(isGlobal ? {} : { organisationId: organisationId || undefined }) }
       }
     });
 
@@ -404,7 +404,7 @@ const getHistoricalPerformance = async (req, res) => {
       where: {
         status: 'SERVED',
         servedAt: { gte: startDate },
-        ...(isGlobal ? {} : { queue: { organisationId } })
+        ...(isGlobal ? {} : { queue: { organisationId: organisationId || undefined } })
       },
       select: { servedAt: true, calledAt: true, queueId: true }
     });
@@ -439,7 +439,7 @@ const getStaffPerformance = async (req, res) => {
     const { organisationId, isGlobal, error } = resolveScope(req);
     if (error) return res.json({ success: true, data: [] });
 
-    const queueFilter = { isActive: true, ...(isGlobal ? {} : { organisationId }) };
+    const queueFilter = { isActive: true, ...(isGlobal ? {} : { organisationId: organisationId || undefined }) };
 
     const staffPerformance = await prisma.staffAssignment.findMany({
       where: { queue: queueFilter },
@@ -483,7 +483,7 @@ const getCustomerSatisfaction = async (req, res) => {
 
     const feedbackFilter = {
       createdAt: { gte: new Date(new Date().setDate(new Date().getDate() - 30)) },
-      ...(isGlobal ? {} : { queue: { organisationId } })
+      ...(isGlobal ? {} : { queue: { organisationId: organisationId || undefined } })
     };
 
     const satisfactionData = await prisma.feedback.findMany({
@@ -519,12 +519,12 @@ const getOperationalEfficiency = async (req, res) => {
     today.setHours(0, 0, 0, 0);
 
     const tokenFilter = {
-      ...(isGlobal ? {} : { queue: { organisationId } })
+      ...(isGlobal ? {} : { queue: { organisationId: organisationId || undefined } })
     };
 
     // Note: Staff count is approximated by filter. 
     // Ideally, we should check StaffAssignment, but filtering by User.role=STAFF+Org works.
-    const staffFilter = { role: 'STAFF', isActive: true, ...(isGlobal ? {} : { organisationId }) };
+    const staffFilter = { roleModel: { name: 'STAFF' }, isActive: true, ...(isGlobal ? {} : { organisationId: organisationId || undefined }) };
 
     const [totalTokens, servedTokens, staffCount, avgServiceTime] = await Promise.all([
       prisma.token.count({

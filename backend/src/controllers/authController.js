@@ -46,12 +46,7 @@ const registerUser = async (req, res) => {
         phoneNumber,
         roleId: userRole.id,
         isVerified: false,
-        isActive: true,
-        userRoles: {
-          create: {
-            roleId: userRole.id
-          }
-        }
+        isActive: true
       },
       include: {
         roleModel: true
@@ -98,12 +93,7 @@ const loginUser = async (req, res) => {
       where: { email },
       include: {
         roleModel: true,
-        organisation: true,
-        userRoles: {
-          include: {
-            role: true
-          }
-        }
+        organisation: true
       }
     });
 
@@ -123,47 +113,26 @@ const loginUser = async (req, res) => {
       });
     }
 
-    // Get all roles for this user (from UserRole junction table)
-    const userRoles = user.userRoles && user.userRoles.length > 0 
-      ? user.userRoles.map(ur => ur.role.name)
-      : [user.roleModel.name]; // Fallback to primary role
+    // Simplified login for single role
+    const token = generateToken({
+      id: user.id,
+      role: user.roleModel.name,
+      organisationId: user.organisationId
+    });
 
-    // If user has only one role, login directly
-    if (userRoles.length === 1) {
-      const token = generateToken({
-        id: user.id,
-        role: userRoles[0],
-        organisationId: user.organisationId
-      });
-
-      return res.json({
-        success: true,
-        message: 'Login successful',
-        data: {
-          token,
-          user: {
-            id: user.id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            role: userRoles[0],
-            organisation: user.organisation
-          }
-        }
-      });
-    }
-
-    // If user has multiple roles, return available roles for selection
-    res.json({
+    return res.json({
       success: true,
-      message: 'Multiple roles available. Please select one.',
+      message: 'Login successful',
       data: {
-        userId: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        availableRoles: userRoles,
-        requiresRoleSelection: true
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.roleModel.name,
+          organisation: user.organisation
+        }
       }
     });
   } catch (error) {
@@ -383,34 +352,8 @@ const selectRole = async (req, res) => {
       });
     }
 
-    // Find user and verify the selected role is available
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        roleModel: true,
-        organisation: true,
-        userRoles: {
-          include: {
-            role: true
-          }
-        }
-      }
-    });
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    // Get all available roles for this user
-    const userRoles = user.userRoles && user.userRoles.length > 0 
-      ? user.userRoles.map(ur => ur.role.name)
-      : [user.roleModel.name];
-
-    // Verify the selected role is available for this user
-    if (!userRoles.includes(selectedRole)) {
+    // Single-role design: Role selection is redundant, but if called, just re-verify primary role
+    if (user.roleModel.name !== selectedRole) {
       return res.status(403).json({
         success: false,
         message: 'Selected role is not available for this user'
@@ -483,53 +426,24 @@ const assignRoleToUser = async (req, res) => {
       });
     }
 
-    // Check if user already has this role
-    const existingUserRole = await prisma.userRole.findUnique({
-      where: {
-        userId_roleId: {
-          userId,
-          roleId
-        }
-      }
-    });
-
-    if (existingUserRole) {
-      return res.status(400).json({
-        success: false,
-        message: 'User already has this role'
-      });
-    }
-
-    // Assign role to user
-    const userRole = await prisma.userRole.create({
+    // Assign role to user by updating the User model directly
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
       data: {
-        userId,
-        roleId
+        roleId: role.id
       },
       include: {
-        role: true,
-        user: {
-          include: {
-            userRoles: {
-              include: {
-                role: true
-              }
-            }
-          }
-        }
+        roleModel: true
       }
     });
 
-    res.status(201).json({
+    res.status(200).json({
       success: true,
-      message: 'Role assigned to user successfully',
+      message: 'Role updated successfully',
       data: {
-        userRole: {
-          userId: userRole.userId,
-          roleId: userRole.roleId,
-          roleName: userRole.role.name
-        },
-        userRoles: userRole.user.userRoles.map(ur => ur.role.name)
+        userId: updatedUser.id,
+        roleId: updatedUser.roleId,
+        roleName: updatedUser.roleModel.name
       }
     });
   } catch (error) {
@@ -599,12 +513,7 @@ const getUserRoles = async (req, res) => {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: {
-        roleModel: true,
-        userRoles: {
-          include: {
-            role: true
-          }
-        }
+        roleModel: true
       }
     });
 
@@ -615,17 +524,11 @@ const getUserRoles = async (req, res) => {
       });
     }
 
-    const userRoles = user.userRoles && user.userRoles.length > 0 
-      ? user.userRoles.map(ur => ({
-          id: ur.role.id,
-          name: ur.role.name,
-          description: ur.role.description
-        }))
-      : [{
-          id: user.roleModel.id,
-          name: user.roleModel.name,
-          description: user.roleModel.description
-        }];
+    const roles = [{
+      id: user.roleModel.id,
+      name: user.roleModel.name,
+      description: user.roleModel.description
+    }];
 
     res.json({
       success: true,
@@ -634,7 +537,7 @@ const getUserRoles = async (req, res) => {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
-        roles: userRoles,
+        roles: roles,
         primaryRole: user.roleModel.name
       }
     });
